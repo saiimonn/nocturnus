@@ -323,7 +323,7 @@ const FloorplanCanvas = () => {
         </DialogContent>
       </Dialog>
       {!floorplanUrl ? (
-        <div className="flex h-[600px] w-[800px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-white/15 bg-black/40">
+        <div className="flex h-150 w-200 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-white/15 bg-black/40">
           <div className="text-base font-semibold">Upload your floorplan</div>
           <div className="text-sm text-white/60">
             Add an image to start placing tables.

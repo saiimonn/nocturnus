@@ -30,10 +30,6 @@ import {
   LogOut,
   Settings,
   User,
-  ShoppingCart,
-  Package,
-  Users,
-  BarChart3,
   MartiniIcon,
   Book,
   Clipboard,
@@ -92,8 +88,8 @@ const bookingNavigation: NavigationType[] = [
 
 const eventsNavigation: NavigationType[] = [
   {
-    name: 'Events',
-    href: '/booking/events',
+    name: 'Events/Promos',
+    href: '/events',
     icon: Clipboard,
   }
 ]
@@ -222,7 +218,7 @@ const AdminSidebar = () => {
                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                     tooltip={`${user.name} (${user.email})`}
                   >
-                    <div className="text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-600">
+                    <div className="text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg bg-linear-to-br from-pink-500 via-purple-500 to-indigo-600">
                       {user.avatar ? (
                         <img
                           src={user.avatar}
