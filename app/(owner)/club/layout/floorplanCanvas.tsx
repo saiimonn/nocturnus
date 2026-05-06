@@ -63,7 +63,7 @@ const FloorplanCanvas = () => {
   
   const [floorplanUrl, setFloorplanUrl] = useState<string | null>(null);
   const [floorplanObjectUrl, setFloorplanObjectUrl] = useState<string | null>(null);
-  const [image] = useImage(floorplanUrl || undefined);
+  const [image] = useImage(floorplanUrl ?? '');
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>, id: string) => {
     // Get the new X and Y coordinates after the user stops dragging
