@@ -61,9 +61,9 @@ const FloorplanCanvas = () => {
   const transformerRef = useRef<Konva.Transformer | null>(null);
   const tableRefs = useRef<Record<string, Konva.Group | null>>({});
   
-  // Load a placeholder blueprint image
-  // In production, this URL would come from your Supabase club_details table
-  const [image] = useImage('https://preview.redd.it/nightclub-3500-2100-px-25-by-15-squares-140-px-grid-v0-18vfy9b320ea1.jpg?auto=webp&s=f585e9c757e31aaa7c35d98abea29ffc6db37942');
+  const [floorplanUrl, setFloorplanUrl] = useState<string | null>(null);
+  const [floorplanObjectUrl, setFloorplanObjectUrl] = useState<string | null>(null);
+  const [image] = useImage(floorplanUrl || undefined);
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>, id: string) => {
     // Get the new X and Y coordinates after the user stops dragging
@@ -191,6 +191,22 @@ const FloorplanCanvas = () => {
     setIsEditMode(false);
   };
 
+  const handleFloorplanUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const objectUrl = URL.createObjectURL(file);
+    setFloorplanUrl(objectUrl);
+    setFloorplanObjectUrl(objectUrl);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (floorplanObjectUrl) {
+        URL.revokeObjectURL(floorplanObjectUrl);
+      }
+    };
+  }, [floorplanObjectUrl]);
+
   useEffect(() => {
     const transformer = transformerRef.current;
     if (!transformer) return;
@@ -306,113 +322,125 @@ const FloorplanCanvas = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Stage
-        width={800}
-        height={600}
-        className="bg-black border border-zinc-800 cursor-crosshair"
-        onMouseDown={(e) => {
-          const stage = e.target.getStage();
-          if (stage && e.target === stage) {
-            setSelectedId(null);
-            setIsDetailsOpen(false);
-          }
-        }}
-        onTouchStart={(e) => {
-          const stage = e.target.getStage();
-          if (stage && e.target === stage) {
-            setSelectedId(null);
-            setIsDetailsOpen(false);
-          }
-        }}
-      >
-        {/* LAYER 1: Static Background Blueprint */}
-        {/* listening={false} ensures the image cannot intercept click/drag events */}
-        <Layer listening={false}>
-          {image && (
-            <KonvaImage
-              image={image}
-              width={800}
-              height={600}
-              opacity={0.4} // Dimmed so the interactive tables stand out more
+      {!floorplanUrl ? (
+        <div className="flex h-[600px] w-[800px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-white/15 bg-black/40">
+          <div className="text-base font-semibold">Upload your floorplan</div>
+          <div className="text-sm text-white/60">
+            Add an image to start placing tables.
+          </div>
+          <label className="inline-flex cursor-pointer">
+            <span className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/80">
+              Upload Image
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={handleFloorplanUpload}
             />
-          )}
-        </Layer>
+          </label>
+        </div>
+      ) : (
+        <Stage
+          width={800}
+          height={600}
+          className="bg-black border border-zinc-800 cursor-crosshair"
+          onMouseDown={(e) => {
+            const stage = e.target.getStage();
+            if (stage && e.target === stage) {
+              setSelectedId(null);
+              setIsDetailsOpen(false);
+            }
+          }}
+          onTouchStart={(e) => {
+            const stage = e.target.getStage();
+            if (stage && e.target === stage) {
+              setSelectedId(null);
+              setIsDetailsOpen(false);
+            }
+          }}
+        >
+          <Layer listening={false}>
+            {image && (
+              <KonvaImage image={image} width={800} height={600} opacity={0.4} />
+            )}
+          </Layer>
 
-        {/* LAYER 2: Interactive Tables */}
-        <Layer>
-          {tables.map((table) => (
-            <Group
-              key={table.id}
-              ref={(node) => {
-                tableRefs.current[table.id] = node;
-              }}
-              x={table.x}
-              y={table.y}
-              draggable
-              onClick={() => handleSelect(table.id)}
-              onTap={() => handleSelect(table.id)}
-              onDragEnd={(e) => handleDragEnd(e, table.id)}
-              onTransformEnd={() => handleTransformEnd(table.id)}
-              onMouseEnter={(e) => {
-                const container = e.target.getStage()?.container();
-                if (container) container.style.cursor = 'grab';
-              }}
-              onMouseLeave={(e) => {
-                const container = e.target.getStage()?.container();
-                if (container) container.style.cursor = 'crosshair';
-              }}
-            >
-              {table.shape === 'circle' ? (
-                <Circle
-                  x={table.radius}
-                  y={table.radius}
-                  radius={table.radius}
-                  fill={table.id === selectedId ? '#3b82f6' : '#27272a'}
-                  stroke={table.id === selectedId ? '#60a5fa' : '#52525b'}
-                  strokeWidth={2}
-                  shadowColor="black"
-                  shadowBlur={table.id === selectedId ? 12 : 4}
-                  shadowOpacity={0.6}
+          <Layer>
+            {tables.map((table) => (
+              <Group
+                key={table.id}
+                ref={(node) => {
+                  tableRefs.current[table.id] = node;
+                }}
+                x={table.x}
+                y={table.y}
+                draggable
+                onClick={() => handleSelect(table.id)}
+                onTap={() => handleSelect(table.id)}
+                onDragEnd={(e) => handleDragEnd(e, table.id)}
+                onTransformEnd={() => handleTransformEnd(table.id)}
+                onMouseEnter={(e) => {
+                  const container = e.target.getStage()?.container();
+                  if (container) container.style.cursor = 'grab';
+                }}
+                onMouseLeave={(e) => {
+                  const container = e.target.getStage()?.container();
+                  if (container) container.style.cursor = 'crosshair';
+                }}
+              >
+                {table.shape === 'circle' ? (
+                  <Circle
+                    x={table.radius}
+                    y={table.radius}
+                    radius={table.radius}
+                    fill={table.id === selectedId ? '#3b82f6' : '#27272a'}
+                    stroke={table.id === selectedId ? '#60a5fa' : '#52525b'}
+                    strokeWidth={2}
+                    shadowColor="black"
+                    shadowBlur={table.id === selectedId ? 12 : 4}
+                    shadowOpacity={0.6}
+                  />
+                ) : (
+                  <Rect
+                    width={table.width}
+                    height={table.height}
+                    fill={table.id === selectedId ? '#3b82f6' : '#27272a'}
+                    stroke={table.id === selectedId ? '#60a5fa' : '#52525b'}
+                    strokeWidth={2}
+                    cornerRadius={6}
+                    shadowColor="black"
+                    shadowBlur={table.id === selectedId ? 12 : 4}
+                    shadowOpacity={0.6}
+                  />
+                )}
+                <Text
+                  text={table.name}
+                  fontSize={14}
+                  fontFamily="sans-serif"
+                  fill="white"
+                  fontStyle="bold"
+                  width={table.shape === 'circle' ? table.radius * 2 : table.width}
+                  height={table.shape === 'circle' ? table.radius * 2 : table.height}
+                  align="center"
+                  verticalAlign="middle"
                 />
-              ) : (
-                <Rect
-                  width={table.width}
-                  height={table.height}
-                  fill={table.id === selectedId ? '#3b82f6' : '#27272a'}
-                  stroke={table.id === selectedId ? '#60a5fa' : '#52525b'}
-                  strokeWidth={2}
-                  cornerRadius={6}
-                  shadowColor="black"
-                  shadowBlur={table.id === selectedId ? 12 : 4}
-                  shadowOpacity={0.6}
-                />
-              )}
-              <Text
-                text={table.name}
-                fontSize={14}
-                fontFamily="sans-serif"
-                fill="white"
-                fontStyle="bold"
-                width={table.shape === 'circle' ? table.radius * 2 : table.width}
-                height={table.shape === 'circle' ? table.radius * 2 : table.height}
-                align="center"
-                verticalAlign="middle"
-              />
-            </Group>
-          ))}
-          <Transformer
-            ref={transformerRef}
-            rotateEnabled={false}
-            keepRatio={tables.find((table) => table.id === selectedId)?.shape === 'circle'}
-            boundBoxFunc={(oldBox, newBox) => {
-              if (newBox.width < 60 || newBox.height < 40) {
-                return oldBox;
-              }
-              return newBox;
-            }}
-          />
-        </Layer>
-      </Stage>
+              </Group>
+            ))}
+            <Transformer
+              ref={transformerRef}
+              rotateEnabled={false}
+              keepRatio={tables.find((table) => table.id === selectedId)?.shape === 'circle'}
+              boundBoxFunc={(oldBox, newBox) => {
+                if (newBox.width < 60 || newBox.height < 40) {
+                  return oldBox;
+                }
+                return newBox;
+              }}
+            />
+          </Layer>
+        </Stage>
+      )}
       <Dialog
         open={isDetailsOpen && Boolean(selectedTable)}
         onOpenChange={(open) => {
