@@ -1,65 +1,41 @@
+import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="flex flex-col flex-1 bg-linear-to-b from-black to-[#202020] text-white">
+      <div className = "relative z-10 flex justify-between items-center p-16">
+        <h1 className="text-2xl">NYX</h1>
+
+        <div className = "flex gap-4 items-center">
+          <Link href="/" className = "text-sm font-medium hover:text-gray-300 transition-colors">
+            Log In
+          </Link>
+          
+          <Button variant ="ghost" className = "rounded-full px-6 py-2 bg-[#e6e6e6] text-black text-sm font-medium hover:bg-white transition-colors">
+            Profile
+          </Button>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </div>
+
+      <div className = "flex flex-col flex-1 items-center justify-center px-6 -mt-24">
+        <h1 className = "text-3xl md:text-4xl font-semibold mb-2 tracking-tight">
+          Book local nightclubs in Cebu
+        </h1>
+
+        <p className = "text-xs md:text-sm text-[#a3a3a3] mb-8 text-center">
+          Lorem Ipsum has been the industrys standard dummy text ever since the 1500s
+        </p>
+
+        <div className = "relative w-full max-w-3xl items-center">
+          <div className="flex justify-end items-center w-full h-14 bg-[#111111] border border-[#2a2a2a] rounded-full p-4 text-sm focus:outline-none focus:border-[#444] transition-all">
+            <button className = "h-10 px-6 rounded-full bg-[#e6e6e6] text-black text-sm font-medium hover:bg-white transition-colors">
+              Search
+            </button>
+          </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
