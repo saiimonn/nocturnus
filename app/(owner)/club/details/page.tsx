@@ -44,21 +44,23 @@ export default function ClubDetailsPage() {
   
   return (
     <div className="p-4">
-      <div className = "flex justify-between">
-        <h1 className="text-3xl font-bold mb-2">{editableDetails.name}</h1>
+      <div className = "flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-background/70 p-6 shadow-sm">
+        <div className = "space-y-2">
+          <h1 className="text-3xl font-semibold text-foreground">
+            {editableDetails.name}
+          </h1>
+        </div>
 
-        <Button
-          onClick={() => setIsEditing(true)}
-          variant = "default"
-          className = "px-4"
-        >
-          <Edit />
-          Edit
-        </Button>
+        <div className = "flex flex-wrap gap-2">
+          <Button
+            onClick={() => setIsEditing(true)}
+            className = "px-4"
+          >
+            <Edit />
+            Edit
+          </Button>
+        </div>
       </div>
-      
-
-      <Separator />
 
       <div className = "flex flex-col space-y-2 py-4">
         <h3 className="text-xl font-semibold">Description</h3>

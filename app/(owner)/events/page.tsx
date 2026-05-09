@@ -290,23 +290,23 @@ export default function EventsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-background/60 p-6">
-        <div>
-          <h1 className="text-2xl font-bold">Club Events</h1>
-          <p className="text-sm text-muted-foreground">
+      <div className = "flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-background/70 p-6 shadow-sm">
+        <div className = "space-y-2">
+          <h1 className="text-3xl font-semibold text-foreground">Club Events</h1>
+          <p className = "text-sm text-muted-foreground">
             Promote upcoming nights, resident DJs, and special promos.
           </p>
         </div>
+
         <Button
-          variant="default"
-          className="px-4"
           onClick={() => setIsAddOpen(true)}
+          className = "px-4"
         >
           <Plus />
           Add Event
         </Button>
       </div>
-
+      
       {events.length === 0 ? (
         <div className="flex min-h-90 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30">
           <h3 className="text-xl font-semibold text-foreground">
