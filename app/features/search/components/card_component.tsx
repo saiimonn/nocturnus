@@ -3,12 +3,16 @@
 import Image from "next/image"
 import { ChevronLeft, ChevronRight, Heart, Star } from "lucide-react"
 
-export default function ClubCard() {
+interface ClubCardProps {
+  imageSrc: string
+}
+
+export default function ClubCard({ imageSrc }: ClubCardProps) {
   return (
     <div className="flex h-full w-full flex-col group cursor-pointer font-sans">
-      <div className="relative w-full rounded-[14px] bg-white overflow-hidden aspect-[4/3] mb-3">
+      <div className="relative w-full rounded-[14px] bg-white overflow-hidden aspect-4/3 mb-3">
         <Image
-          src="/image4.jpg"
+          src={imageSrc}
           alt="Club Image"
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -50,13 +54,7 @@ export default function ClubCard() {
         <div className="flex space-x-1 text-[14px] mt-0.5">
           <h3>5.6 mi</h3>
           <h3>•</h3>
-          <h3 className="truncate">#3 Molave Street, Cebu City</h3>
-        </div>
-
-        <div className="flex space-x-1 text-[14px]">
-          <h3>Barber</h3>
-          <h3>•</h3>
-          <h3>638 reviews</h3>
+          <h3 className="truncate">Address, Cebu City</h3>
         </div>
       </div>
     </div>
