@@ -30,9 +30,11 @@ export default function Home() {
 
         <div className = "relative w-full max-w-3xl items-center">
           <div className="flex justify-end items-center w-full h-14 bg-[#111111] border border-[#2a2a2a] rounded-full p-4 text-sm focus:outline-none focus:border-[#444] transition-all">
-            <button className = "h-10 px-6 rounded-full bg-[#e6e6e6] text-black text-sm font-medium hover:bg-white transition-colors">
-              Search
-            </button>
+            <Link href = "/search">
+              <button className = "h-10 px-6 rounded-full bg-[#e6e6e6] text-black text-sm font-medium hover:bg-white transition-colors">
+                Search
+              </button>
+            </Link>
           </div>
         </div>
       </div>
