@@ -5,7 +5,7 @@ import { Menu, Filter, Map } from "lucide-react"
 
 export default function Search() {
   return (
-    <div className="flex flex-col px-8 py-6 max-w-[1440px] mx-auto w-full">
+    <div className="flex flex-col px-8 py-6 max-w-360 mx-auto w-full">
       <div className="grid grid-cols-[minmax(75px,1fr)_minmax(auto,4fr)_minmax(auto,1fr)] items-center gap-24">
         <h1 className="text-2xl font-bold">Nocturnus</h1>
 
@@ -35,11 +35,11 @@ export default function Search() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
-          <ClubCard imageSrc = "/rizzal.png" />
-          <ClubCard imageSrc = "/rizzal.png" />
-          <ClubCard imageSrc = "/rizzal.png" />
-          <ClubCard imageSrc = "/niners.png" />
-          <ClubCard imageSrc = "/niners.png" />
+          <ClubCard clubName = "club_name" address = "address, cebu city" imageSrcs={["/rizzal.png", "/niners.png", "/image4.jpg"]} />
+          <ClubCard clubName = "club_name" address = "address, cebu city" imageSrcs={["/rizzal.png", "/image4.jpg"]} />
+          <ClubCard clubName = "club_name" address = "address, cebu city" imageSrcs={["/rizzal.png", "/niners.png"]} />
+          <ClubCard clubName = "club_name" address = "address, cebu city" imageSrcs={["/niners.png", "/rizzal.png", "/image4.jpg"]} />
+          <ClubCard clubName = "club_name" address = "address, cebu city" imageSrcs={["/niners.png"]} />
         </div>
       </div>
     </div>
