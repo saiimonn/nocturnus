@@ -90,7 +90,7 @@ export default function Search() {
         lat: c.lat,
         lng: c.lng,
         rating: c.rating,
-        imageSrc: c.imageSrcs[0],
+        imageSrcs: c.imageSrcs,
       })),
     []
   )

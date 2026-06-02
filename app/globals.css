@@ -128,3 +128,11 @@
     @apply font-sans;
   }
 }
+
+.club-popup .leaflet-popup-content {
+  margin: 0 !important;
+}
+
+.club-popup .leaflet-popup-content-wrapper {
+  padding: 0 !important;
+}
