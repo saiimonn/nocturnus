@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import Nav from "@/components/UserNav";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -6,7 +7,9 @@ import Link from "next/link";
 export default function Home() {
   return (
     <div className="flex flex-col flex-1 bg-linear-to-b from-black to-[#202020] text-white">
-      <div className = "relative z-10 flex justify-between items-center px-16 py-8">
+      <Nav />
+
+      {/*<div className = "relative z-10 flex justify-between items-center px-16 py-8">
         <Image
           src="/logo.svg"
           alt = "logo"
@@ -23,7 +26,7 @@ export default function Home() {
             Profile
           </Button>
         </div>
-      </div>
+      </div>*/}
 
       <div className = "flex flex-col flex-1 items-center justify-center px-6 -mt-24">
         <h1 className = "text-3xl md:text-4xl font-semibold mb-2 tracking-tight">

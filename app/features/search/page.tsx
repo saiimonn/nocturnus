@@ -6,6 +6,7 @@ import Image from "next/image"
 import ClubCard from "./components/cardComponent"
 import { Menu, Filter, Map, X } from "lucide-react"
 import Link from "next/link"
+import Nav from "@/components/UserNav"
 
 const MapComponent = dynamic(
   () => import("@/app/features/search/components/mapComponent"),
@@ -99,29 +100,7 @@ export default function Search() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-[#0b0b0b] text-white">
-      {/* ── Header ── */}
-      <div className="shrink-0 px-4 py-6 max-w-360 mx-auto w-full">
-        <div className="grid grid-cols-2 items-center gap-24">
-          <Link
-            href="/"
-          >
-            <Image
-              src="/logo.svg"
-              alt="logo"
-              height={70}
-              width={70}
-            />
-          </Link>
-
-
-          {/*<div className="flex h-12 bg-[#111111] border border-[#2a2a2a] rounded-full p-4 text-sm focus:outline-none focus:border-[#444] transition-all" />*/}
-
-          <div className="flex justify-self-end h-12 bg-[#111111] border border-[#2a2a2a] rounded-full px-6 text-sm items-center justify-center text-white">
-            <Menu className="size-3.5 mr-2" />
-            <p>Menu</p>
-          </div>
-        </div>
-      </div>
+      <Nav />
 
       {/* ── Body ── */}
       <div className="flex flex-1 overflow-hidden">
