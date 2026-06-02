@@ -12,7 +12,7 @@ const MapComponent = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full w-full items-center justify-center bg-[#f5f5f5]">
+      <div className="flex h-full w-full items-center justify-center bg-[#0f0f0f]">
         <div className="text-sm text-gray-400">Loading map…</div>
       </div>
     ),
@@ -98,7 +98,7 @@ export default function Search() {
   )
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#0b0b0b] text-white">
       {/* ── Header ── */}
       <div className="shrink-0 px-4 py-6 max-w-360 mx-auto w-full">
         <div className="grid grid-cols-2 items-center gap-24">
@@ -116,7 +116,7 @@ export default function Search() {
 
           {/*<div className="flex h-12 bg-[#111111] border border-[#2a2a2a] rounded-full p-4 text-sm focus:outline-none focus:border-[#444] transition-all" />*/}
 
-          <div className="flex justify-self-end h-12 bg-[#111111] border border-[#2a2a2a] rounded-full px-6 text-sm items-center justify-center">
+          <div className="flex justify-self-end h-12 bg-[#111111] border border-[#2a2a2a] rounded-full px-6 text-sm items-center justify-center text-white">
             <Menu className="size-3.5 mr-2" />
             <p>Menu</p>
           </div>
@@ -133,7 +133,7 @@ export default function Search() {
         >
           {/* Toolbar */}
           <div className="shrink-0 flex flex-row w-full justify-end items-center px-8 pb-4 gap-4">
-            <button className="flex h-9 bg-[#111111] border border-[#2a2a2a] rounded-full px-6 text-sm items-center justify-center hover:border-gray-400 transition-colors">
+            <button className="flex h-9 bg-[#111111] border border-[#2a2a2a] rounded-full px-6 text-sm items-center justify-center hover:border-gray-400 transition-colors text-white">
               <Filter className="size-3.5 mr-2" />
               Filters
             </button>
@@ -143,7 +143,7 @@ export default function Search() {
               className={`flex h-9 border rounded-full px-6 text-sm items-center justify-center transition-colors ${
                 showMap
                   ? "bg-white text-black border-white hover:bg-gray-100"
-                  : "bg-[#111111] border-[#2a2a2a] hover:border-gray-400"
+                  : "bg-[#111111] border-[#2a2a2a] hover:border-gray-400 text-white"
               }`}
             >
               {showMap ? (

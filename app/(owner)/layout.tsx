@@ -15,7 +15,7 @@ export default function MainLayout({ children }: LayoutProps) {
   return (
     <SidebarProvider>
       <AdminSidebar />
-      <SidebarInset className="grow overflow-hidden">
+      <SidebarInset className="grow overflow-hidden bg-background text-foreground">
         <div className="flex min-h-screen w-full">
           <div className="w-full flex-1">
             <AdminHeader trigger={<SidebarTrigger />} />
