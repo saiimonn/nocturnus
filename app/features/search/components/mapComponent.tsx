@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import { ChevronLeft, ChevronRight, X } from "lucide-react"
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet"
@@ -206,6 +206,17 @@ function MapMarkers({ clubs, activeClubId, onClubSelect }: Omit<MapComponentProp
 }
 
 export default function Map({ clubs, activeClubId, onClubSelect, center }: MapComponentProps) {
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setIsClient(true))
+    return () => window.cancelAnimationFrame(frame)
+  }, [])
+
+  if (!isClient) {
+    return null
+  }
+
   return (
     <MapContainer
       center={center}

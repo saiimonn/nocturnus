@@ -2,11 +2,17 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
 
+
 export default function Home() {
   return (
     <div className="flex flex-col flex-1 bg-linear-to-b from-black to-[#202020] text-white">
-      <div className = "relative z-10 flex justify-between items-center p-16">
-        <h1 className="text-2xl">NYX</h1>
+      <div className = "relative z-10 flex justify-between items-center px-16 py-8">
+        <Image
+          src="/logo.svg"
+          alt = "logo"
+          height={70}
+          width={70}
+        />
 
         <div className = "flex gap-4 items-center">
           <Link href="/" className = "text-sm font-medium hover:text-gray-300 transition-colors">

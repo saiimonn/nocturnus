@@ -2,8 +2,10 @@
 
 import { useState, useMemo } from "react"
 import dynamic from "next/dynamic"
+import Image from "next/image"
 import ClubCard from "./components/cardComponent"
 import { Menu, Filter, Map, X } from "lucide-react"
+import Link from "next/link"
 
 const MapComponent = dynamic(
   () => import("@/app/features/search/components/mapComponent"),
@@ -78,7 +80,7 @@ const clubs: Club[] = [
 const MAP_CENTER: [number, number] = [10.3157, 123.888]
 
 export default function Search() {
-  const [showMap, setShowMap] = useState(false)
+  const [showMap, setShowMap] = useState(true)
   const [activeClubId, setActiveClubId] = useState<number | null>(null)
 
   const mapClubs = useMemo(
@@ -98,11 +100,21 @@ export default function Search() {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {/* ── Header ── */}
-      <div className="flex-shrink-0 px-8 py-6 max-w-360 mx-auto w-full">
-        <div className="grid grid-cols-[minmax(75px,1fr)_minmax(auto,4fr)_minmax(auto,1fr)] items-center gap-24">
-          <h1 className="text-2xl font-bold">Nocturnus</h1>
+      <div className="shrink-0 px-4 py-6 max-w-360 mx-auto w-full">
+        <div className="grid grid-cols-2 items-center gap-24">
+          <Link
+            href="/"
+          >
+            <Image
+              src="/logo.svg"
+              alt="logo"
+              height={70}
+              width={70}
+            />
+          </Link>
 
-          <div className="flex h-12 bg-[#111111] border border-[#2a2a2a] rounded-full p-4 text-sm focus:outline-none focus:border-[#444] transition-all" />
+
+          {/*<div className="flex h-12 bg-[#111111] border border-[#2a2a2a] rounded-full p-4 text-sm focus:outline-none focus:border-[#444] transition-all" />*/}
 
           <div className="flex justify-self-end h-12 bg-[#111111] border border-[#2a2a2a] rounded-full px-6 text-sm items-center justify-center">
             <Menu className="size-3.5 mr-2" />
@@ -120,7 +132,7 @@ export default function Search() {
           }`}
         >
           {/* Toolbar */}
-          <div className="flex-shrink-0 flex flex-row w-full justify-end items-center px-8 pb-4 gap-4">
+          <div className="shrink-0 flex flex-row w-full justify-end items-center px-8 pb-4 gap-4">
             <button className="flex h-9 bg-[#111111] border border-[#2a2a2a] rounded-full px-6 text-sm items-center justify-center hover:border-gray-400 transition-colors">
               <Filter className="size-3.5 mr-2" />
               Filters
