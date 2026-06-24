@@ -22,12 +22,18 @@ export default function Nav() {
   
   return (
     <div className = "relative z-500 flex justify-between items-center px-16 py-8">
-      <Image
-        src="/logo.svg"
-        alt="logo"
-        height={70}
-        width={70}
-      />
+      <div className = "flex gap-4 items-center">
+        <Image
+          src="/logo.svg"
+          alt="logo"
+          height={70}
+          width={70}
+        />
+        <button className="text-white bg-purple-500 border border-purple-600 rounded-lg px-4 py-2">
+            {/*onClick={() => {}}*/}
+            Your favorites
+        </button>
+      </div>
 
       <div className="flex gap-2">
         {!isLoggedIn && (
