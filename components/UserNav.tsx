@@ -29,10 +29,12 @@ export default function Nav() {
           height={70}
           width={70}
         />
-        <button className="text-white bg-purple-500 border border-purple-600 rounded-lg px-4 py-2">
-            {/*onClick={() => {}}*/}
-            Your favorites
-        </button>
+          <Link href = "/search">
+          <button className="text-white bg-purple-500 border border-purple-600 rounded-lg px-4 py-2">
+              {/*onClick={() => {}}*/}
+              Your favorites
+          </button>
+          </Link>
       </div>
 
       <div className="flex gap-2">
