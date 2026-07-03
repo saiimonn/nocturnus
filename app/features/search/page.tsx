@@ -1,11 +1,10 @@
 'use client'
 
 import { useState, useMemo } from "react"
+import { useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
-import Image from "next/image"
 import ClubCard from "./components/cardComponent"
 import { Menu, Filter, Map, X } from "lucide-react"
-import Link from "next/link"
 import Nav from "@/components/UserNav"
 
 const MapComponent = dynamic(
@@ -83,10 +82,20 @@ const MAP_CENTER: [number, number] = [10.3157, 123.888]
 export default function Search() {
   const [showMap, setShowMap] = useState(true)
   const [activeClubId, setActiveClubId] = useState<number | null>(null)
+  const searchParams = useSearchParams()
+  const query = searchParams.get("q")?.trim().toLowerCase() ?? ""
+
+  const filteredClubs = useMemo(() => {
+    if (!query) return clubs
+    return clubs.filter((club) =>
+      club.name.toLowerCase().includes(query) ||
+      club.address.toLowerCase().includes(query)
+    )
+  }, [query])
 
   const mapClubs = useMemo(
     () =>
-      clubs.map((c) => ({
+      filteredClubs.map((c) => ({
         id: c.id,
         name: c.name,
         address: c.address,
@@ -95,10 +104,11 @@ export default function Search() {
         rating: c.rating,
         imageSrcs: c.imageSrcs,
       })),
-    []
+    [filteredClubs]
   )
 
   return (
+    
     <div className="flex flex-col h-screen overflow-hidden bg-[#0b0b0b] text-white">
       <Nav />
 
@@ -139,33 +149,48 @@ export default function Search() {
             </button>
           </div>
 
-          {/* Cards grid */}
-          <div
-            className={`px-8 pb-8 grid gap-x-4 gap-y-8 ${
-              showMap
-                ? "grid-cols-2"
-                : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-            }`}
-          >
-            {clubs.map((club) => (
-              <div
-                key={club.id}
-                className={`transition-opacity duration-200 ${
-                  activeClubId !== null && activeClubId !== club.id
-                    ? "opacity-40"
-                    : "opacity-100"
-                }`}
-                onMouseEnter={() => setActiveClubId(club.id)}
-                onMouseLeave={() => setActiveClubId(null)}
-              >
-                <ClubCard
-                  clubName={club.name}
-                  address={club.address}
-                  imageSrcs={club.imageSrcs}
-                />
+          <div className="px-8 pb-4">
+            {query ? (
+              <div className="text-sm text-gray-400">
+                Results for “{query}”
               </div>
-            ))}
+            ) : (
+              <div className="text-sm text-gray-400">Showing all clubs</div>
+            )}
           </div>
+
+          {filteredClubs.length === 0 ? (
+            <div className="px-8 pb-8 text-sm text-gray-400">
+              No clubs found for “{query}”.
+            </div>
+          ) : (
+            <div
+              className={`px-8 pb-8 grid gap-x-4 gap-y-8 ${
+                showMap
+                  ? "grid-cols-2"
+                  : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+              }`}
+            >
+              {filteredClubs.map((club) => (
+                <div
+                  key={club.id}
+                  className={`transition-opacity duration-200 ${
+                    activeClubId !== null && activeClubId !== club.id
+                      ? "opacity-40"
+                      : "opacity-100"
+                  }`}
+                  onMouseEnter={() => setActiveClubId(club.id)}
+                  onMouseLeave={() => setActiveClubId(null)}
+                >
+                  <ClubCard
+                    clubName={club.name}
+                    address={club.address}
+                    imageSrcs={club.imageSrcs}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right: map panel */}
