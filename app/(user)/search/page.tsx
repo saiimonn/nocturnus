@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
 import ClubCard from "./components/cardComponent"
 import { Menu, Filter, Map, X } from "lucide-react"
-import Nav from "@/components/UserNav"
 
 const MapComponent = dynamic(
   () => import("@/app/(user)/search/components/mapComponent"),
@@ -109,8 +108,7 @@ export default function SearchPage() {
 
   return (
     
-    <div className="flex flex-col h-screen overflow-hidden bg-[#0b0b0b] text-white">
-      <Nav />
+    <div className="flex flex-1 overflow-hidden">
 
       {/* ── Body ── */}
       <div className="flex flex-1 overflow-hidden">

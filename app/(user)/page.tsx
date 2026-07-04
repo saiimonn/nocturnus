@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import SearchSuggestionsCard from "@/components/searchSuggestionsCard";
 import Image from "next/image";
 import { MapIcon } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 export default function Home() {
   const router = useRouter();
@@ -46,7 +47,7 @@ export default function Home() {
   };
 
   return (
-    <div className="bg-[#050505] text-white font-sans flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col">
       <main className = "flex flex-col items-center w-full px-6 md:px-12 lg:px-24 pb-20 flex-1">
         <section className = "flex flex-col items-center justify-center mt-24 mb-32 text-center">
           <div className = "mb-6 w-24 h-16">
@@ -113,6 +114,8 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        <Separator className="max-w-6xl mx-auto mb-24 bg-[#1a1a1a]" />
 
         <section className = "w-full max-w-5xl mb-24 relative">
           <h2 className="text-2xl md:text-3xl font-medium mb-16 text-left uppercase">how to book</h2>
