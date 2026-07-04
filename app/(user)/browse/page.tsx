@@ -7,7 +7,7 @@ import ClubCard from "./components/cardComponent"
 import { Menu, Filter, Map, X } from "lucide-react"
 
 const MapComponent = dynamic(
-  () => import("@/app/(user)/search/components/mapComponent"),
+  () => import("@/app/(user)/browse/components/mapComponent"),
   {
     ssr: false,
     loading: () => (
