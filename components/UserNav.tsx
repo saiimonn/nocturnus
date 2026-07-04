@@ -36,7 +36,7 @@ export default function Nav() {
 
       <div className="flex items-center gap-8">
         <nav className="hidden md:flex items-center gap-8 text-[10px] md:text-sm font-semibold tracking-wide text-white">
-          <Link href="/search" className="hover:text-[#a3a3a3] transition-colors">
+          <Link href="/browse" className="hover:text-[#a3a3a3] transition-colors">
             Browse
           </Link>
           <Link href="/events" className="hover:text-[#a3a3a3] transition-colors">
