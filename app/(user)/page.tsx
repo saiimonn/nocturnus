@@ -71,11 +71,13 @@ export default function Home() {
         <section className = "w-full max-w-6xl mb-32">
           <h2 className="text-2xl md:text-3xl font-medium mb-8">TONIGHT&apos;S VENUES</h2>
           <div className = "grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className = "relative group overflow-hidden rounded-md border border-[#0a0a0a] aspect-video">
+            <div className="relative group overflow-hidden rounded-md border border-[#0a0a0a] aspect-video">
+              <Image
+                src="/Image.png"
+                alt = "img"
+                fill
+              />
               <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent z-10" />
-              <div className = "absolute top-4 right-4 z-20 border border-[#333] px-3 py-1 text-[10px] font-mono tracking-wider bg-black/60 rounded-sm text-gray-300">
-                10,000 MIN
-              </div>
 
               <div className = "absolute bottom-4 left-4 z-20 w-full pr-8">
                 <h3 className="text-2xl font-semibold mb-2 tracking-wide">ICON</h3>
@@ -85,18 +87,19 @@ export default function Home() {
                     Mabolo
                   </span>
                   <span className = "flex items-center gap-2 border border-[#333] px-2 py-0.5 rounded-sm bg-black/40">
-                    <span className="size-1.5" />
                     4 Tables Left
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className = "relative group overflow-hidden rounded-md border border-[#0a0a0a] aspect-video">
+            <div className="relative group overflow-hidden rounded-md border border-[#0a0a0a] aspect-video">
+              <Image
+                src="/Image.png"
+                alt = "img"
+                fill
+              />
               <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent z-10" />
-              <div className = "absolute top-4 right-4 z-20 border border-[#333] px-3 py-1 text-[10px] font-mono tracking-wider bg-black/60 rounded-sm text-gray-300">
-                10,000 MIN
-              </div>
 
               <div className = "absolute bottom-4 left-4 z-20 w-full pr-8">
                 <h3 className="text-2xl font-semibold mb-2 tracking-wide">ICON</h3>
@@ -106,7 +109,6 @@ export default function Home() {
                     Mabolo
                   </span>
                   <span className = "flex items-center gap-2 border border-[#333] px-2 py-0.5 rounded-sm bg-black/40">
-                    <span className="size-1.5" />
                     4 Tables Left
                   </span>
                 </div>
