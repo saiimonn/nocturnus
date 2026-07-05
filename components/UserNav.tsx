@@ -21,7 +21,7 @@ export default function Nav() {
   }, []);
   
   return (
-    <header className="flex items-center justify-between px-4 py-4 m-4 rounded-xl border border-[#1a1a1a] shadow-lg shadow-gray-950/10">
+    <header className="flex items-center justify-between px-4 py-4 m-4 border-b border-[#1a1a1a] shadow-lg shadow-gray-950/10">
       <Link href="/" className="flex items-center gap-2">
         <div className="w-8 h-5 flex items-center justify-center">
           <Image
