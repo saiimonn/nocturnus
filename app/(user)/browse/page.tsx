@@ -51,36 +51,6 @@ export default function BrowsePage() {
         </p>
       </div>
 
-      {/* Filter bar */}
-      <div className="mt-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-wrap gap-2">
-          {VENUE_TYPES.map((type) => (
-            <button
-              key={type}
-              onClick={() => setActiveType(type)}
-              className={`flex h-9 items-center justify-center rounded-full border px-5 text-sm transition-colors ${
-                activeType === type
-                  ? "border-white bg-white text-black"
-                  : "border-[#2a2a2a] bg-transparent text-gray-300 hover:border-gray-400"
-              }`}
-            >
-              {type}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex gap-3">
-          <button className="flex h-9 items-center gap-2 rounded-full border border-[#2a2a2a] px-5 text-sm text-gray-300 hover:border-gray-400">
-            Filter by date
-            <ChevronDown className="size-3.5" />
-          </button>
-          <button className="flex h-9 items-center gap-2 rounded-full border border-[#2a2a2a] px-5 text-sm text-gray-300 hover:border-gray-400">
-            Guest count
-            <ChevronDown className="size-3.5" />
-          </button>
-        </div>
-      </div>
-
       {/* Venue grid */}
       {filteredVenues.length === 0 ? (
         <div className="pt-16 text-sm text-gray-500">
