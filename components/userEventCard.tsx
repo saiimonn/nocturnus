@@ -1,6 +1,6 @@
 export default function EventCard({ event }) {
   return (
-    <div className="bg-white/5 rounded-lg overflow-hidden border border-white/10">
+    <div className="w-full bg-white/5 rounded-lg overflow-hidden border border-white/10">
       
       <div className="relative h-40 bg-white/10">
                 <img
@@ -10,7 +10,7 @@ export default function EventCard({ event }) {
                 />
 
 
-                <span className="absolute top-2 left-2 bg-black/70 text-[10px] font-semibold px-2 py-1 rounded uppercase tracking-wide">
+                <span className="absolute top-2 left-2 bg-purple-600/20 text-[10px] font-semibold px-2 py-1 rounded uppercase tracking-wide">
                 {event.category}
                 </span>
 

@@ -1,19 +1,28 @@
 
 "use client";
-
+import DateRangeFilter from "@/components/dateRangeFilter";
 import EventCard from "@/components/userEventCard";
 import Nav from "@/components/UserNav";
 import { useState, useMemo } from "react";
 
 
+function getStatus(dateISO) {
+  const eventDate = new Date(dateISO);
+  const now = new Date();
+  const isToday = eventDate.toDateString() === now.toDateString();
+  return isToday ? "TONIGHT" : "UPCOMING";
+}
+
+
 // sample pa temporary shii
+
 
 const EVENTS = [
   {
     id: 1,
     name: "OASIS CEBU",
-    status: "TONIGHT",
     location: "Luxury Nightlife • Panagdait, Cebu City",
+    dateISO: "2026-07-06T22:00:00",
     date: "Tonight, 10:00 PM",
     category: "Live DJ",
     image: "/images/oasis.jpg",
@@ -21,8 +30,8 @@ const EVENTS = [
   {
     id: 2,
     name: "TRADEMARK",
-    status: "TONIGHT",
     location: "Underground • Mabolo, Cebu City",
+    dateISO: "2026-07-06T23:00:00",
     date: "Tonight, 11:00 PM",
     category: "Lounge",
     image: "/images/trademark.jpg",
@@ -30,8 +39,8 @@ const EVENTS = [
   {
     id: 3,
     name: "SENTRAL",
-    status: "TONIGHT",
     location: "Rooftop Lounge • IT Park, Cebu",
+    dateISO: "2026-07-06T21:00:00",
     date: "Tonight, 9:00 PM",
     category: "Rooftop",
     image: "/images/sentral.jpg",
@@ -39,47 +48,54 @@ const EVENTS = [
   {
     id: 4,
     name: "ICON",
-    status: "UPCOMING",
     location: "Mainroom • Mabolo, Cebu City",
+    dateISO: "2026-07-07T22:00:00",
     date: "Tomorrow, 10:00 PM",
     category: "Live DJ",
     image: "/images/icon.jpg",
   },
   {
     id: 5,
-    name: "ICON",
-    status: "UPCOMING",
+    name: "ICON LATE NIGHT",
     location: "Mainroom • Mabolo, Cebu City",
-    date: "Tomorrow, 10:00 PM",
+    dateISO: "2026-07-08T00:30:00",
+    date: "Tomorrow, 12:30 AM",
     category: "Live DJ",
     image: "/images/icon.jpg",
   },
 ];
-
 const filters = ["ALL", "LIVE DJ", "LOUNGE", "ROOFTOP"];
 
 export default function EventListing() {
+  
+  const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
   const [activeFilter, setActiveFilter] = useState("ALL");
   const [search, setSearch] = useState("");
 
-  const filteredEvents = useMemo(() => {
-    return EVENTS.filter((event) => {
-        const matchesFilter =
-          activeFilter === "ALL" ||
-          event.category.toUpperCase() === activeFilter;
-        const matchesSearch =
-          event.name.toLowerCase().includes(search.toLowerCase()) ||
-          event.location.toLowerCase().includes(search.toLowerCase());
-        return matchesFilter && matchesSearch;
-    });
-  }, [activeFilter, search]);
+ const filteredEvents = useMemo(() => {
+  return EVENTS.filter((event) => {
+    const matchesFilter =
+      activeFilter === "ALL" || event.category.toUpperCase() === activeFilter;
 
+    const matchesSearch =
+      event.name.toLowerCase().includes(search.toLowerCase()) ||
+      event.location.toLowerCase().includes(search.toLowerCase());
+
+    const eventDate = new Date(event.dateISO);
+    const afterStart = !dateRange.startDate || eventDate >= new Date(dateRange.startDate);
+    const beforeEnd = !dateRange.endDate || eventDate <= new Date(dateRange.endDate + "T23:59:59");
+
+    return matchesFilter && matchesSearch && afterStart && beforeEnd;
+  });
+}, [activeFilter, search, dateRange]);
+
+  
 
 
 
     return (
       <div className="flex flex-col flex-1 bg-linear-to-b from-black to-[#202020] text-white">
-      <Nav />
+
 
 
 
@@ -91,10 +107,9 @@ export default function EventListing() {
         <div className = "relative w-full items-center">
             
                 <div className="min-h-screen bg-black text-white">
-      {/* Nav */}
+
   
 
-      {/* Hero */}
       <div className="px-8 pt-12 pb-6">
         <h1 className = "text-4xl md:text-6xl font-semibold mb-2 tracking-tight">
           FIND YOUR NIGHT
@@ -108,7 +123,7 @@ export default function EventListing() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Find the best night around..."
-          className="w-full bg-black border border-blue-500 rounded px-3 py-2 text-sm text-white placeholder:text-white/50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full bg-black border max-w-md border-blue-500 rounded px-3 py-2 text-sm text-white placeholder:text-white/50 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
       </div>
 
@@ -126,25 +141,41 @@ export default function EventListing() {
           >
             {filter}
           </button>
-        ))}
-        <div className="ml-auto flex items-center gap-2 px-4 py-2 text-xs border border-white/20 rounded text-white/70">
-          <span className="font-semibold text-white">DATE:</span>
-          6 JULY 2026 - 20 JULY 2026
+          
+        ))
+          
+        }
+        
+
+         <div>
+          <DateRangeFilter
+            startDate={dateRange.startDate}
+            endDate={dateRange.endDate}
+            onChange={setDateRange}
+          />
         </div>
+              
+       
+
+
+
       </div>
 
-      {/* Grid */}
-      <div className="px-8 pb-16 grid max-w-8xl grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {filteredEvents.map((event) => (
-          <EventCard key={event.id} event={event} />
-        ))}
-        {filteredEvents.length === 0 && (
-          <p className="col-span-full text-white/50 text-sm">
-            No events match your filters.
-          </p>
-        )}
-      </div>
-    </div>
+
+          <div className="px-8 pb-16 grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6">
+            {filteredEvents.map((event) => (
+              <EventCard key={event.id} event={{ ...event, status: getStatus(event.dateISO) }} />
+              /*get status uhhh makes it write TONIGHT or UPCOMING based on the dateISO*/
+            ))}
+
+            {filteredEvents.length === 0 && (
+                <p className="col-span-full text-white/50 text-sm"> No events exists! </p>
+            )}
+       
+          </div>
+
+
+        </div>
 
 
 
