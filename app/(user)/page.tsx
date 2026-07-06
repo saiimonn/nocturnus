@@ -48,7 +48,7 @@ export default function Home() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <main className = "flex flex-col items-center w-full px-6 md:px-12 lg:px-24 pb-20 flex-1">
+      <main className = "flex flex-col items-center w-full px-6 md:px-12 lg:px-24 pb-20 flex-1 select-none">
         <section className = "flex flex-col items-center justify-center mt-24 mb-32 text-center">
           <div className = "mb-6 w-24 h-16">
             <Image
