@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Eye, EyeOff, MapPin } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, MapPin } from "lucide-react";
 
 type VenueType = "NIGHTCLUB" | "LOUNGE" | "ROOFTOP";
 
@@ -19,8 +19,12 @@ export default function ClubOwnerRegisterPage() {
 
   return (
     <div className = "relative min-h-screen w-full overflow-hidden bg-[#0a0a0a] text-white">
-      <div className = "relative z-10 flex min-h-screen flex-col p-8 md:px-16">
-        <div className = "flex items-center justify-end">
+      <div className = "relative z-10 flex flex-col p-8 md:px-16">
+        <div className = "flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors">
+            <ArrowLeft className="size-4" />
+            Back
+          </Link>
           <div className = "flex items-center gap-2 text-xs text-gray-400">
             <span>STEP</span>
             <span className = "rounded bg-[#1a1a1a] px-2 py-1 font-mono text-white">
@@ -31,8 +35,8 @@ export default function ClubOwnerRegisterPage() {
           </div>
         </div>
 
-        <div className = "flex flex-1 items-center">
-          <div className = "w-full max-w-md py-16">
+        <div className = "flex justify-center pt-10 md:pt-16">
+          <div className = "w-full max-w-md">
             {step === 1 ? (
               <>
                 <h1 className = "font-serif text-4xl font-semibold leading-tight">
@@ -65,7 +69,7 @@ export default function ClubOwnerRegisterPage() {
                 <p className = "mt-6 text-center text-sm text-gray-500">
                   Already have an account?{" "}
                   <Link
-                    href="/login"
+                    href="/auth/login"
                     className = "text-white underline underline-offset-2"
                   >
                     Login
