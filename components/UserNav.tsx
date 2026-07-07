@@ -37,10 +37,10 @@ export default function Nav() {
       <div className="flex items-center gap-8">
         <nav className="hidden md:flex items-center gap-8 text-[10px] md:text-sm font-semibold tracking-wide text-white">
           <Link href="/browse" className="hover:text-[#a3a3a3] transition-colors">
-            Browse
+            BROWSE
           </Link>
-          <Link href="/events" className="hover:text-[#a3a3a3] transition-colors">
-            Events
+          <Link href="/currentEvents" className="hover:text-[#a3a3a3] transition-colors">
+            EVENTS
           </Link>
         </nav>
 
@@ -70,12 +70,12 @@ export default function Nav() {
           >
             {!isLoggedIn ? (
               <div className="px-4 py-2 space-y-2">
-                <button
-                  onClick={() => { setIsLoggedIn(true); setIsOpen(false); }}
+                <Link
+                  href = "/auth/login"
                   className="block w-full text-left text-sm font-medium text-white hover:text-gray-300 transition-colors"
                 >
                   Add Your Club
-                </button>
+                </Link>
                 <Link
                   href="#"
                   className="block text-sm text-gray-400 hover:text-white transition-colors"

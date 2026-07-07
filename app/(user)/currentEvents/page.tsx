@@ -6,7 +6,7 @@ import Nav from "@/components/UserNav";
 import { useState, useMemo } from "react";
 
 
-function getStatus(dateISO) {
+function getStatus(dateISO: string) {
   const eventDate = new Date(dateISO);
   const now = new Date();
   const isToday = eventDate.toDateString() === now.toDateString();
@@ -25,7 +25,7 @@ const EVENTS = [
     dateISO: "2026-07-06T22:00:00",
     date: "Tonight, 10:00 PM",
     category: "Live DJ",
-    image: "/images/oasis.jpg",
+    image: "/image.png",
   },
   {
     id: 2,
@@ -34,7 +34,7 @@ const EVENTS = [
     dateISO: "2026-07-06T23:00:00",
     date: "Tonight, 11:00 PM",
     category: "Lounge",
-    image: "/images/trademark.jpg",
+    image: "/image4.jpg",
   },
   {
     id: 3,
@@ -43,7 +43,7 @@ const EVENTS = [
     dateISO: "2026-07-06T21:00:00",
     date: "Tonight, 9:00 PM",
     category: "Rooftop",
-    image: "/images/sentral.jpg",
+    image: "/image.png",
   },
   {
     id: 4,
@@ -52,7 +52,7 @@ const EVENTS = [
     dateISO: "2026-07-07T22:00:00",
     date: "Tomorrow, 10:00 PM",
     category: "Live DJ",
-    image: "/images/icon.jpg",
+    image: "/image.png",
   },
   {
     id: 5,
@@ -61,7 +61,7 @@ const EVENTS = [
     dateISO: "2026-07-08T00:30:00",
     date: "Tomorrow, 12:30 AM",
     category: "Live DJ",
-    image: "/images/icon.jpg",
+    image: "/image.png",
   },
 ];
 const filters = ["ALL", "LIVE DJ", "LOUNGE", "ROOFTOP"];
@@ -94,7 +94,7 @@ export default function EventListing() {
 
 
     return (
-      <div className="flex flex-col flex-1 bg-linear-to-b from-black to-[#202020] text-white">
+      <div className="flex flex-col flex-1 text-white">
 
 
 
@@ -123,7 +123,7 @@ export default function EventListing() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Find the best night around..."
-          className="w-full bg-black border max-w-md border-blue-500 rounded px-3 py-2 text-sm text-white placeholder:text-white/50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full bg-black border max-w-md border-white/20 rounded px-3 py-2 text-sm text-white placeholder:text-white/50 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
       </div>
 
