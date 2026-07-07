@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import SearchSuggestionsCard from "@/components/searchSuggestionsCard";
 import Image from "next/image";
 import { MapIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+
 
 export default function Home() {
   const router = useRouter();
@@ -46,6 +47,181 @@ export default function Home() {
     }
   };
 
+  interface Venue {
+    name: string;
+    imageSrc: string;
+    imageAlt: string;
+    location: string;
+    tablesLeft: string;
+  }
+
+  interface VenueCarouselProps {
+    venueCards: Venue[];
+    autoPlayInterval?: number;
+  }
+
+  const AutoVenueCarousel: React.FC<VenueCarouselProps> = ({ 
+    venueCards, 
+    autoPlayInterval = 3500 // Defaults to 3.5 seconds
+  }) => {
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [isPaused, setIsPaused] = useState(false);
+    const touchStartX = useRef<number | null>(null);
+    const touchEndX = useRef<number | null>(null);
+
+    const visibleCards = 2;
+    const maxStartIndex = Math.max(venueCards.length - visibleCards, 0);
+
+    useEffect(() => {
+      if (isPaused || maxStartIndex === 0) return;
+
+      const timer = setInterval(() => {
+        setCurrentIndex((prev) => (prev >= maxStartIndex ? 0 : prev + 1));
+      }, autoPlayInterval);
+
+      return () => clearInterval(timer);
+    }, [isPaused, maxStartIndex, autoPlayInterval]);
+
+    useEffect(() => {
+      if (currentIndex > maxStartIndex) {
+        setCurrentIndex(0);
+      }
+    }, [currentIndex, maxStartIndex]);
+
+    const goToNextSlide = () => {
+      if (maxStartIndex === 0) return;
+      setCurrentIndex((prev) => (prev >= maxStartIndex ? 0 : prev + 1));
+    };
+
+    const goToPrevSlide = () => {
+      if (maxStartIndex === 0) return;
+      setCurrentIndex((prev) => (prev <= 0 ? maxStartIndex : prev - 1));
+    };
+
+    const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+      touchStartX.current = e.touches[0].clientX;
+      touchEndX.current = null;
+      setIsPaused(true);
+    };
+
+    const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+      touchEndX.current = e.touches[0].clientX;
+    };
+
+    const handleTouchEnd = () => {
+      if (touchStartX.current === null || touchEndX.current === null) {
+        setIsPaused(false);
+        return;
+      }
+
+      const swipeDistance = touchStartX.current - touchEndX.current;
+      const minSwipeDistance = 50;
+
+      if (swipeDistance > minSwipeDistance) {
+        goToNextSlide();
+      } else if (swipeDistance < -minSwipeDistance) {
+        goToPrevSlide();
+      }
+
+      setIsPaused(false);
+    };
+
+    if (!venueCards || venueCards.length === 0) return null;
+
+    return (
+      <div
+        className="relative w-full max-w-5xl mx-auto overflow-hidden"
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ touchAction: "pan-y" }}
+      >
+        {/* Slider Track */}
+        <div
+          className="flex transition-transform duration-700 ease-in-out"
+          style={{ transform: `translateX(-${currentIndex * (100 / visibleCards)}%)` }}
+        >
+          {venueCards.map((venue, cardIndex) => (
+            <div key={`card-${cardIndex}-${venue.name}`} className="w-1/2 shrink-0 px-2">
+              <div className="relative group overflow-hidden rounded-md border border-[#0a0a0a] aspect-video">
+                <Image
+                  src={venue.imageSrc}
+                  alt={venue.imageAlt}
+                  fill
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent z-10" />
+
+                <div className="absolute bottom-4 left-4 z-20 w-full pr-8">
+                  <h3 className="text-2xl font-semibold mb-2 tracking-wide text-white">
+                    {venue.name}
+                  </h3>
+                  <div className="flex items-center text-[11px] text-gray-400 gap-3 font-mono">
+                    <span className="flex items-center gap-1">
+                      <MapIcon className="size-3" />
+                      {venue.location}
+                    </span>
+                    <span className="flex items-center gap-2 border border-[#333] px-2 py-0.5 rounded-sm bg-black/40 text-white">
+                      {venue.tablesLeft}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex justify-center gap-2 mt-4">
+          {Array.from({ length: maxStartIndex + 1 }).map((_, index) => (
+            <button
+              key={`dot-${index}`}
+              onClick={() => setCurrentIndex(index)}
+              className={`h-1 rounded-full transition-all duration-300 ${
+                index === currentIndex ? 'w-6 bg-white' : 'w-2 bg-gray-600 hover:bg-gray-400'
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const venueCards: Venue[] = [
+    {
+      name: "ICON",
+      imageSrc: "/Image.png",
+      imageAlt: "ICON venue",
+      location: "Mabolo",
+      tablesLeft: "4 Tables Left",
+    },
+    {
+      name: "OASIS",
+      imageSrc: "/image4.jpg",
+      imageAlt: "OASIS venue",
+      location: "Panagdait",
+      tablesLeft: "2 Tables Left",
+    },
+    {
+      name: "OASIS",
+      imageSrc: "/image4.jpg",
+      imageAlt: "OASIS venue",
+      location: "Panagdait",
+      tablesLeft: "2 Tables Left",
+    },
+    {
+      name: "OASIS",
+      imageSrc: "/image4.jpg",
+      imageAlt: "OASIS venue",
+      location: "Panagdait",
+      tablesLeft: "2 Tables Left",
+    },
+  ];
+
+  
+
   return (
     <div className="flex-1 flex flex-col">
       <main className = "flex flex-col items-center w-full px-6 md:px-12 lg:px-24 pb-20 flex-1 select-none">
@@ -70,51 +246,7 @@ export default function Home() {
 
         <section className = "w-full max-w-6xl mb-32">
           <h2 className="text-2xl md:text-3xl font-medium mb-8">TONIGHT&apos;S VENUES</h2>
-          <div className = "grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="relative group overflow-hidden rounded-md border border-[#0a0a0a] aspect-video">
-              <Image
-                src="/Image.png"
-                alt = "img"
-                fill
-              />
-              <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent z-10" />
-
-              <div className = "absolute bottom-4 left-4 z-20 w-full pr-8">
-                <h3 className="text-2xl font-semibold mb-2 tracking-wide">ICON</h3>
-                <div className = "flex items-center text-[11px] text-gray-400 gap-3 font-mono">
-                  <span className = "flex items-center gap-1">
-                    <MapIcon className="size-3" />
-                    Mabolo
-                  </span>
-                  <span className = "flex items-center gap-2 border border-[#333] px-2 py-0.5 rounded-sm bg-black/40">
-                    4 Tables Left
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative group overflow-hidden rounded-md border border-[#0a0a0a] aspect-video">
-              <Image
-                src="/Image.png"
-                alt = "img"
-                fill
-              />
-              <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent z-10" />
-
-              <div className = "absolute bottom-4 left-4 z-20 w-full pr-8">
-                <h3 className="text-2xl font-semibold mb-2 tracking-wide">ICON</h3>
-                <div className = "flex items-center text-[11px] text-gray-400 gap-3 font-mono">
-                  <span className = "flex items-center gap-1">
-                    <MapIcon className="size-3" />
-                    Mabolo
-                  </span>
-                  <span className = "flex items-center gap-2 border border-[#333] px-2 py-0.5 rounded-sm bg-black/40">
-                    4 Tables Left
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <AutoVenueCarousel venueCards={venueCards} />
         </section>
 
         <Separator className="max-w-6xl mx-auto mb-24 bg-[#1a1a1a]" />
@@ -136,8 +268,8 @@ export default function Home() {
             </div>
   
             <div className="flex flex-col items-center w-full md:w-1/3 px-4 mb-10 md:mb-0">
-              <div className="w-16 h-16 border border-[#444] bg-[#050505] flex items-center justify-center mb-6 text-xs font-mono text-gray-300 rotate-45">
-                <span className="-rotate-45">02</span>
+              <div className="w-16 h-16 rounded-full border border-[#444] bg-[#050505] flex items-center justify-center mb-6 text-xs font-mono text-gray-300">
+                02
               </div>
               <h4 className="text-sm tracking-wider font-semibold mb-3">MASTER THE FLOOR</h4>
               <p className="text-xs text-[#888] leading-relaxed max-w-[220px]">
@@ -146,8 +278,8 @@ export default function Home() {
             </div>
   
             <div className="flex flex-col items-center w-full md:w-1/3 px-4">
-              <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-6 text-xs font-mono text-black font-bold">
-                03
+              <div className="w-16 h-16 rounded-full border border-[#444] bg-[#050505] flex items-center justify-center mb-6 text-xs font-mono text-gray-300">
+                02
               </div>
               <h4 className="text-sm tracking-wider font-semibold mb-3">LOCK IT IN</h4>
               <p className="text-xs text-[#888] leading-relaxed max-w-[220px]">
