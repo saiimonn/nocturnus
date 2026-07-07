@@ -2,36 +2,78 @@
 
 import React from "react";
 import Image from "next/image";
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, MapPin, ArrowRight, Plus, Bookmark } from "lucide-react";
 
+const EVENTS = [
+  {
+    id: 1,
+    name: "OASIS CEBU",
+    location: "Luxury Nightlife • Panagdait, Cebu City",
+    date: "Tonight, 10:00 PM",
+    category: "Live DJ",
+  },
+  {
+    id: 2,
+    name: "TRADEMARK",
+    location: "Underground • Mabolo, Cebu City",
+    date: "Tonight, 11:00 PM",
+    category: "Lounge",
+  },
+  {
+    id: 3,
+    name: "SENTRAL",
+    location: "Rooftop Lounge • IT Park, Cebu",
+    date: "Tonight, 9:00 PM",
+    category: "Rooftop",
+  },
+  {
+    id: 4,
+    name: "ICON",
+    location: "Mainroom • Mabolo, Cebu City",
+    date: "Tomorrow, 10:00 PM",
+    category: "Live DJ",
+  },
+  {
+    id: 5,
+    name: "ICON LATE NIGHT",
+    location: "Mainroom • Mabolo, Cebu City",
+    date: "Tomorrow, 12:30 AM",
+    category: "Live DJ",
+  },
+];
+
 export default function EventDetailPage() {
+  const params = useParams();
+  
+  // 2. Look at the URL (e.g., /events/1), get the ID number, and find that event in the array
+  const eventId = Number(params.id);
+  const currentEvent = EVENTS.find((e) => e.id === eventId) || EVENTS[0]; // Falls back to first event if id doesn't match
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white p-4 md:p-8 max-w-5xl mx-auto space-y-8 font-sans">
       
-      {/* 1. HERO BANNER IMAGE SECTION */}
+      {/* HERO BANNER */}
       <div className="relative h-[60vh] min-h-[400px] w-full rounded-2xl overflow-hidden border border-zinc-800 shadow-lg">
         <Image
           src="/Image.png" 
-          alt="Electric Nights with DJ Spark"
+          alt={currentEvent.name}
           fill
           className="object-cover"
           priority
         />
-        {/* Dark subtle overlay at the bottom to make text readable */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
       </div>
 
-      {/* 2. TITLE & TICKETS CTA BAR */}
+      {/* TITLE & TICKETS - Now updates dynamically! */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-800 pb-8">
         <div className="space-y-2">
           <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
-            Live Event
+            {currentEvent.category} Event
           </span>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-            ELECTRIC NIGHTS
-            <br />
-            <span className="text-zinc-300">WITH DJ SPARK</span>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight uppercase">
+            {currentEvent.name}
           </h1>
         </div>
         <div className="flex items-center gap-3">
@@ -44,63 +86,49 @@ export default function EventDetailPage() {
         </div>
       </div>
 
-      {/* 3. TWO-COLUMN CONTENT GRID */}
+      {/* TWO-COLUMN GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
         
-        {/* LEFT COLUMN: QUICK INFO CARDS (Narrower) */}
+        {/* LEFT COLUMN */}
         <div className="lg:col-span-4 space-y-4">
-          
-          {/* Date & Time Card */}
           <div className="p-6 rounded-xl border border-zinc-800 bg-[#121212] space-y-5">
             <div className="flex items-start gap-4">
               <Calendar className="w-4 h-4 text-zinc-400 mt-1" />
               <div>
-                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Date</p>
-                <p className="text-sm font-semibold text-zinc-200">Sept 24, 2026</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4 pt-4 border-t border-zinc-800/50">
-              <Clock className="w-4 h-4 text-zinc-400 mt-1" />
-              <div>
-                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Time</p>
-                <p className="text-sm font-semibold text-zinc-200">10:00 PM – Late</p>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Schedule</p>
+                <p className="text-sm font-semibold text-zinc-200">{currentEvent.date}</p>
               </div>
             </div>
           </div>
 
-          {/* Venue Card */}
           <div className="p-6 rounded-xl border border-zinc-800 bg-[#121212] space-y-4">
             <div className="flex items-start gap-4">
               <MapPin className="w-4 h-4 text-zinc-400 mt-1" />
               <div>
-                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Venue</p>
-                <p className="text-sm font-semibold text-zinc-200">Trademark Cebu</p>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Venue & Area</p>
+                <p className="text-sm font-semibold text-zinc-200">{currentEvent.location.split("•")[1] || currentEvent.location}</p>
                 <p className="text-xs text-zinc-500 mt-2 leading-relaxed">
-                  888 Ave, Gov. M. Cuenco Ave, Cebu City, 6000 Cebu
+                  {currentEvent.location}
                 </p>
               </div>
             </div>
-            {/* Map Placeholder Block */}
             <div className="w-full h-24 bg-[#0a0a0a] border border-zinc-800 rounded-md mt-4 relative flex items-end justify-end p-2">
                  <span className="text-[10px] text-zinc-500 font-medium">VIEW MAP</span>
             </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: ABOUT & ADMISSION SECTION (Wider) */}
+        {/* RIGHT COLUMN */}
         <div className="lg:col-span-8 space-y-10">
-          
-          {/* About/The Event Section */}
           <div className="space-y-4">
             <h3 className="text-sm font-bold tracking-[0.15em] uppercase text-white border-l-2 border-white pl-4">
               THE EVENT
             </h3>
             <p className="text-sm text-zinc-400 leading-loose pr-4">
-              Experience an immersive sonic journey as DJ Spark takes over Trademark Cebu. Expect high-voltage energy, unreleased edits, and a state-of-the-art visual production tailored specifically for this venue. The night promises relentless grooves and an uncompromising atmosphere.
+              Experience an immersive sonic journey at {currentEvent.name}. Expect high-voltage energy, unreleased edits, and a state-of-the-art visual production tailored specifically for this venue. The night promises relentless grooves and an uncompromising atmosphere.
             </p>
           </div>
 
-          {/* Admission Section */}
           <div className="space-y-4">
             <h3 className="text-sm font-bold tracking-[0.15em] uppercase text-white border-l-2 border-white pl-4">
               ADMISSION
@@ -108,7 +136,6 @@ export default function EventDetailPage() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
-              {/* General Admission Option */}
               <div className="p-6 rounded-xl border border-zinc-800 bg-[#121212] flex flex-col justify-between h-56">
                 <div>
                   <div className="flex justify-between items-start mb-2">
@@ -129,7 +156,6 @@ export default function EventDetailPage() {
                 </div>
               </div>
 
-              {/* Secure a Table Option */}
               <div className="p-6 rounded-xl border border-zinc-800 bg-[#121212] flex flex-col justify-between h-56">
                 <div>
                   <div className="flex justify-between items-start mb-2">
@@ -156,7 +182,6 @@ export default function EventDetailPage() {
 
         </div>
       </div>
-
     </div>
   );
 }
