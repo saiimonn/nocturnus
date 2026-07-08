@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import SearchSuggestionsCard from "@/components/searchSuggestionsCard";
 import Image from "next/image";
-import { MapIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 
@@ -66,10 +66,31 @@ export default function Home() {
   }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
+    const [visibleCards, setVisibleCards] = useState(1);
     const touchStartX = useRef<number | null>(null);
     const touchEndX = useRef<number | null>(null);
 
-    const visibleCards = 2;
+    useEffect(() => {
+      const updateVisibleCards = () => {
+        if (window.innerWidth >= 1280) {
+          setVisibleCards(3);
+          return;
+        }
+
+        if (window.innerWidth >= 768) {
+          setVisibleCards(2);
+          return;
+        }
+
+        setVisibleCards(1);
+      };
+
+      updateVisibleCards();
+      window.addEventListener("resize", updateVisibleCards);
+
+      return () => window.removeEventListener("resize", updateVisibleCards);
+    }, []);
+
     const maxStartIndex = Math.max(venueCards.length - visibleCards, 0);
 
     useEffect(() => {
@@ -130,7 +151,7 @@ export default function Home() {
 
     return (
       <div
-        className="relative w-full max-w-5xl mx-auto overflow-hidden"
+        className="w-full max-w-screen-2xl mx-auto"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
         onTouchStart={handleTouchStart}
@@ -138,39 +159,66 @@ export default function Home() {
         onTouchEnd={handleTouchEnd}
         style={{ touchAction: "pan-y" }}
       >
-        {/* Slider Track */}
-        <div
-          className="flex transition-transform duration-700 ease-in-out"
-          style={{ transform: `translateX(-${currentIndex * (100 / visibleCards)}%)` }}
-        >
-          {venueCards.map((venue, cardIndex) => (
-            <div key={`card-${cardIndex}-${venue.name}`} className="w-1/2 shrink-0 px-2">
-              <div className="relative group overflow-hidden rounded-md border border-[#0a0a0a] aspect-video">
-                <Image
-                  src={venue.imageSrc}
-                  alt={venue.imageAlt}
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent z-10" />
+        <div className="flex items-center gap-3 md:gap-4">
+          <button
+            type="button"
+            onClick={goToPrevSlide}
+            disabled={maxStartIndex === 0}
+            aria-label="Previous venues"
+            className="shrink-0 rounded-full border border-white/15 bg-black/35 p-2.5 text-white/90 backdrop-blur-md transition-all duration-300 hover:border-white/40 hover:bg-black/55 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
 
-                <div className="absolute bottom-4 left-4 z-20 w-full pr-8">
-                  <h3 className="text-2xl font-semibold mb-2 tracking-wide text-white">
-                    {venue.name}
-                  </h3>
-                  <div className="flex items-center text-[11px] text-gray-400 gap-3 font-mono">
-                    <span className="flex items-center gap-1">
-                      <MapIcon className="size-3" />
-                      {venue.location}
-                    </span>
-                    <span className="flex items-center gap-2 border border-[#333] px-2 py-0.5 rounded-sm bg-black/40 text-white">
-                      {venue.tablesLeft}
-                    </span>
+          {/* Slider Track */}
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <div
+              className="flex transition-transform duration-700 ease-in-out"
+              style={{ transform: `translateX(-${currentIndex * (100 / visibleCards)}%)` }}
+            >
+              {venueCards.map((venue, cardIndex) => (
+                <div
+                  key={`card-${cardIndex}-${venue.name}`}
+                  className="w-full shrink-0 px-2 md:w-1/2 xl:w-1/3 hover:scale-90 hover:skew-y-1 transition-all duration-300 cursor-pointer"
+                >
+                  <div className="relative group overflow-hidden rounded-md border border-[#0a0a0a] aspect-4/3 xl:aspect-video">
+                    <Image
+                      src={venue.imageSrc}
+                      alt={venue.imageAlt}
+                      fill
+                      className="object-cover"
+                    />
+                    <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent z-10" />
+
+                    <div className="absolute bottom-4 left-4 z-20 w-full pr-8">
+                      <h3 className="text-2xl font-semibold mb-2 tracking-wide text-white">
+                        {venue.name}
+                      </h3>
+                      <div className="flex items-center text-[11px] text-gray-400 gap-3 font-mono">
+                        <span className="flex items-center gap-1">
+                          <MapIcon className="size-3" />
+                          {venue.location}
+                        </span>
+                        <span className="flex items-center gap-2 border border-[#333] px-2 py-0.5 rounded-sm bg-black/40 text-white">
+                          {venue.tablesLeft}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
-          ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={goToNextSlide}
+            disabled={maxStartIndex === 0}
+            aria-label="Next venues"
+            className="shrink-0 rounded-full border border-white/15 bg-black/35 p-2.5 text-white/90 backdrop-blur-md transition-all duration-300 hover:border-white/40 hover:bg-black/55 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <ChevronRight className="size-5" />
+          </button>
         </div>
 
         <div className="flex justify-center gap-2 mt-4">
@@ -279,7 +327,7 @@ export default function Home() {
   
             <div className="flex flex-col items-center w-full md:w-1/3 px-4">
               <div className="w-16 h-16 rounded-full border border-[#444] bg-[#050505] flex items-center justify-center mb-6 text-xs font-mono text-gray-300">
-                02
+                03
               </div>
               <h4 className="text-sm tracking-wider font-semibold mb-3">LOCK IT IN</h4>
               <p className="text-xs text-[#888] leading-relaxed max-w-[220px]">

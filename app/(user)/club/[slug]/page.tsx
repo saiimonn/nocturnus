@@ -22,7 +22,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
   ]
 
   return (
-    <div className="min-h-screen w-full bg-black text-white">
+    <div className="min-h-screen w-full bg-black text-white -mt-20 z-0">
       {/* Hero */}
       <div className="relative h-105 w-full overflow-hidden md:h-130">
         <Image
@@ -30,7 +30,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
           alt={venue.name}
           fill
           priority
-          className="object-cover"
+          className="object-cover select-none"
         />
         <div className="absolute inset-0 bg-linear-to-t from-black via-black/40 to-black/10" />
 
