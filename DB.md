@@ -1,0 +1,164 @@
+# Otus — Database Schema Documentation
+
+**Project:** Cebu Nightclub Reservation System (Otus)
+**Schema Version:** 1.0
+
+## 📐 Global Schema Conventions
+
+Before diving into the tables, here are the core rules applied across the database:
+* **Primary Keys:** All PKs (`id`) use UUID v4 — globally unique, non-sequential identifiers.
+* **Timestamps:** All `created_at`, `updated_at`, and event/reservation times are stored in UTC. Display conversion is handled at the application layer.
+* **Denormalization:** The `club_id` is intentionally denormalized on both `Club_Tables` and `Reservations` to avoid unnecessary joins in high-frequency queries.
+* **Unique Constraints:** `Users.email` carries a `UNIQUE` constraint at the database level.
+
+---
+
+## 🔗 Entity Relationships
+
+* **Users** (1) → **Clubs** (M) *(via `owner_id`)*
+* **Clubs** (1) → **Club_Images** (M)
+* **Clubs** (1) → **Floor_Plans** (M)
+* **Clubs** (1) → **Events** (M)
+* **Clubs** (1) → **Club_Tables** (M)
+* **Clubs** (1) → **Discount_Codes** (M)
+* **Floor_Plans** (1) → **Club_Tables** (M)
+* **Club_Tables** (1) → **Reservations** (M)
+* **Events** (1) → **Reservations** (M) *(Optional relation)*
+
+---
+
+## 🗄️ Table Definitions
+
+### 1. `Users`
+Core identity table for all platform users (guests, owners, and admins).
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | PK, NO NULL | Unique user identifier. |
+| `full_name` | `varchar` | NO NULL | Full display name. |
+| `email` | `varchar` | NO NULL, UNIQUE| Unique email address. |
+| `contact_number`| `varchar` | NULLABLE | Mobile / contact number. |
+| `password_hash` | `varchar` | NO NULL | Bcrypt-hashed password. |
+| `role` | `varchar` | NO NULL | Accepts: `guest`, `owner`, or `admin`. |
+| `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
+| `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
+
+### 2. `Owner_Verification_Tokens`
+Handles the one-time token flow for verifying nightclub owners.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | PK, NO NULL | Token record identifier. |
+| `email` | `varchar` | NO NULL | Owner email being verified. |
+| `token_hash` | `varchar` | NO NULL | Hashed one-time token. |
+| `expires_at` | `timestamp` | NO NULL | Token expiry datetime (UTC). |
+| `used` | `boolean` | NO NULL | TRUE once token is consumed. |
+| `used_by` | `uuid` | FK, NO NULL | References `auth.users` / `Users.id`. |
+| `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
+
+### 3. `Clubs`
+The primary entity for a nightclub venue.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | PK, NO NULL | Unique club identifier. |
+| `owner_id` | `uuid` | FK, NO NULL | References `Users.id`. |
+| `name` | `varchar` | NO NULL | Club name. |
+| `description` | `text` | NULLABLE | Club description / about. |
+| `address` | `varchar` | NO NULL | Physical address. |
+| `operating_hours`| `jsonb` | NULLABLE | Structured hours: `{day, open, close}` per day. |
+| `cover_image_url`| `varchar` | NULLABLE | URL to cover photo in object storage. |
+| `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
+| `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
+
+### 4. `Club_Images`
+Additional gallery images for a specific club.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | PK, NO NULL | Image record identifier. |
+| `club_id` | `uuid` | FK, NO NULL | References `Clubs.id`. |
+| `image_url` | `varchar` | NO NULL | URL to image in object storage. |
+| `caption` | `varchar` | NULLABLE | Optional image caption. |
+| `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
+
+### 5. `Floor_Plans`
+Distinct physical spaces within a club (e.g., Ground Floor, VIP Mezzanine).
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | PK, NO NULL | Floor plan identifier. |
+| `club_id` | `uuid` | FK, NO NULL | References `Clubs.id`. |
+| `name` | `varchar` | NO NULL | Floor plan label (e.g., "Ground Floor"). |
+| `image_url` | `varchar` | NO NULL | URL to the 2D floor plan canvas image. |
+| `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
+| `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
+
+### 6. `Club_Tables`
+Individual bookable units mapped to a specific floor plan.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | PK, NO NULL | Table identifier. |
+| `floor_plan_id` | `uuid` | FK, NO NULL | References `Floor_Plans.id`. |
+| `club_id` | `uuid` | FK, NO NULL | References `Clubs.id` (Denormalized). |
+| `label` | `varchar` | NO NULL | Table label shown on floor plan. |
+| `capacity` | `integer` | NO NULL | Maximum number of guests. |
+| `minimum_spend` | `decimal` | NULLABLE | Min spend amount in PHP (2 decimal places). |
+| `category` | `varchar` | NULLABLE | ENUM enforced: `VIP`, `regular`, `booth`, `bar`. |
+| `pos_x` | `float` | NO NULL | Relative X coordinate on floor plan (0.0–1.0). |
+| `pos_y` | `float` | NO NULL | Relative Y coordinate on floor plan (0.0–1.0). |
+| `is_available` | `boolean` | NO NULL | Current availability status. |
+| `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
+| `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
+
+### 7. `Events`
+Special nights, DJs, or themed parties hosted by a club.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | PK, NO NULL | Event identifier. |
+| `club_id` | `uuid` | FK, NO NULL | References `Clubs.id`. |
+| `title` | `varchar` | NO NULL | Event name / title. |
+| `description` | `text` | NULLABLE | Event details. |
+| `image_url` | `varchar` | NULLABLE | Event poster URL. |
+| `event_date` | `timestamp` | NO NULL | Scheduled event datetime (UTC). |
+| `status` | `varchar` | NO NULL | Accepts: `draft`, `published`, `cancelled`. |
+| `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
+| `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
+
+### 8. `Discount_Codes`
+Promotional codes mapped to specific clubs for order discounts.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | PK, NO NULL | Discount Code identifier. |
+| `club_id` | `uuid` | FK, NO NULL | References `Clubs.id`. |
+| `code` | `varchar` | NO NULL | The actual text the user types (e.g., "SUMMER20"). |
+| `discount_type` | `varchar` | NO NULL | Math of the discount (`percentage` or `fixed_amount`). |
+| `discount_value`| `decimal` | NO NULL | Numerical value of the discount. |
+| `start_date` | `timestamp` | NO NULL | Start date of when the code becomes active. |
+| `end_date` | `timestamp` | NO NULL | End date of when the code expires. |
+| `usage_limit` | `int` | NO NULL | Max number of times the code can be used globally. |
+| `times_used` | `int` | NO NULL | Counter tracking total completed redemptions. |
+| `is_active` | `boolean` | NO NULL | Manual kill switch for the code. |
+| `min_order_value`| `decimal` | NO NULL | Subtotal required to redeem the code. |
+
+### 9. `Reservations`
+The central booking record linking guests, tables, clubs, and optionally, events.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | PK, NO NULL | Reservation identifier. |
+| `table_id` | `uuid` | FK, NO NULL | References `Club_Tables.id`. |
+| `club_id` | `uuid` | FK, NO NULL | References `Clubs.id` (Denormalized). |
+| `event_id` | `uuid` | FK, NULLABLE| References `Events.id` (Optional). |
+| `reservation_date`| `timestamp`| NO NULL | Date & time of the reservation (UTC). |
+| `guest_name` | `varchar` | NO NULL | Name of the guest making the booking. |
+| `guest_email` | `varchar` | NO NULL | Guest contact email. |
+| `guest_contact` | `varchar` | NULLABLE | Guest phone number. |
+| `party_size` | `integer` | NO NULL | Number of people in the party. |
+| `status` | `varchar` | NO NULL | Accepts: `pending`, `confirmed`, `cancelled`, `completed`. |
+| `created_at` | `timestamp` | NO NULL | Booking creation datetime (UTC). |
+| `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
+> **Note:** `guest_name`, `guest_email`, and `guest_contact` are stored directly on the reservation record to cleanly support walk-ins and guests who book without creating a platform account.
