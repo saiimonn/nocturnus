@@ -57,7 +57,7 @@ export default function BrowsePage() {
           No venues found{query ? ` for "${query}"` : ""}.
         </div>
       ) : (
-        <div className="mt-10 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-4 ">
           {filteredVenues.map((venue) => (
             <Link
               key={venue.id}

@@ -21,9 +21,9 @@ export default function Nav() {
   }, []);
   
   return (
-    <header className="flex items-center justify-between px-4 py-4 m-4 border-b border-[#1a1a1a] shadow-lg shadow-gray-950/10">
-      <Link href="/" className="flex items-center gap-2">
-        <div className="w-8 h-5 flex items-center justify-center">
+    <header className="relative isolate mx-4 mt-4 flex items-center justify-between overflow-visible rounded-2xl  bg-black/45 bg-linear-to-b from-black to-transparent  px-4 py-4 shadow-lg shadow-black/20 backdrop-blur-md  z-10">
+      <Link href="/" className="relative z-10 flex items-center gap-2">
+        <div className="flex h-5 w-8 items-center justify-center">
           <Image
             src="/logo.svg"
             height={100}
@@ -34,8 +34,8 @@ export default function Nav() {
         <span className="text-white text-lg font-medium tracking-tight">Otus</span>
       </Link>
 
-      <div className="flex items-center gap-8">
-        <nav className="hidden md:flex items-center gap-8 text-[10px] md:text-sm font-semibold tracking-wide text-white">
+      <div className="relative z-10 flex items-center gap-8">
+        <nav className="hidden items-center gap-8 text-[10px] font-semibold tracking-wide text-white md:flex md:text-sm">
           <Link href="/browse" className="hover:text-[#a3a3a3] transition-colors">
             BROWSE
           </Link>
@@ -49,7 +49,7 @@ export default function Nav() {
             onClick={() => setIsOpen(!isOpen)}
             aria-expanded={isOpen}
             aria-haspopup="menu"
-            className={`flex items-center gap-2 px-4 py-2 border border-[#1a1a1a] rounded-full hover:shadow-md hover:cursor-pointer transition-all duration-200 ${
+            className={`flex cursor-pointer items-center gap-2 rounded-full border border-white/10 px-4 py-2 transition-all duration-200 hover:border-white/20 hover:shadow-md hover:shadow-black/20 ${
               isOpen ? "scale-[0.97]" : "scale-100"
             }`}
           >
@@ -62,7 +62,7 @@ export default function Nav() {
           </button>
 
           <div
-            className={`absolute right-0 mt-2 w-56 bg-[#0f0f0f] border border-[#1a1a1a] rounded-xl shadow-xl py-3 z-50 origin-top-right transition-all duration-200 ${
+            className={`absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-xl border border-white/10 bg-[#0f0f0f]/95 py-3 shadow-xl shadow-black/30 transition-all duration-200 backdrop-blur-md ${
               isOpen
                 ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
                 : "opacity-0 scale-95 -translate-y-1 pointer-events-none"
