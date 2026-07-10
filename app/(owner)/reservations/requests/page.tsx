@@ -118,7 +118,7 @@ export default function BookingRequestsPage() {
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-background/70 p-6 shadow-sm">
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold text-foreground">
-            Booking Requests
+            Reservation Requests
           </h1>
           <p className="text-sm text-muted-foreground">
             Review and manage table reservation requests from guests.
