@@ -211,7 +211,7 @@ export default function ClubOwnerRegisterPage() {
                     By completing registration, you agree to our{" "}
 
                     <Link
-                      href="/terms"
+                      href="/termsOfService"
                       className = "text-gray-400 underline underline-offset-2"
                     >
                       Terms of Service
