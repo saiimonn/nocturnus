@@ -76,12 +76,12 @@ const customizationNavigation: NavigationType[] = [
 
 const bookingNavigation: NavigationType[] = [
   {
-    name: 'Booking',
+    name: 'Reservation',
     href: 'booking',
     icon: Book,
     submenu: [
-      { name: 'Requests', href: '/booking/requests' },
-      { name: 'History', href: '/booking/history' },
+      { name: 'Requests', href: '/reservations/requests' },
+      { name: 'History', href: '/reservations/history' },
     ],
   },
 ];

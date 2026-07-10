@@ -95,7 +95,7 @@ export default function BookingHistoryPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-background/70 p-6 shadow-sm">
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold text-foreground">Booking History</h1>
+          <h1 className="text-3xl font-semibold text-foreground">Reservation History</h1>
           <p className="text-sm text-muted-foreground">
             View past reservations and booking outcomes.
           </p>
