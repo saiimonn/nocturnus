@@ -129,15 +129,19 @@ export default function EventListing() {
         />
       </div>
 
-      {filteredEvents.length === 0 ? (
-        <div className="pt-16 text-sm text-gray-500">No events found.</div>
-      ) : (
-        <div className="mt-10 grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
-          {filteredEvents.map((event) => (
-            <EventCard key={event.id} event={{ ...event, status: getStatus(event.dateISO) }} />
-          ))}
+
+            <div className="px-8 pb-16 grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6">
+              {filteredEvents.map((event) => (
+                <EventCard key={event.id} event={{ ...event, status: getStatus(event.dateISO) }} />
+                /*get status uhhh makes it write TONIGHT or UPCOMING based on the dateISO*/
+              ))}
+
+              {filteredEvents.length === 0 && (
+                  <p className="col-span-full text-white/50 text-sm"> No events exists! </p>
+              )}
+            </div>
+        
         </div>
-      )}
-    </div>
+    
   );
 }

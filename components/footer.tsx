@@ -7,7 +7,7 @@ export default function Footer() {
       <div className="tracking-widest font-mono w-1/3 justify-center flex">© 2026 OTUS CEBU</div>
       <div className="flex gap-6 tracking-widest font-mono w-1/3 justify-end">
         <a href="#" className="hover:text-white transition-colors">PRIVACY</a>
-        <a href="#" className="hover:text-white transition-colors">TERMS</a>
+        <a href="/termsOfService" className="hover:text-white transition-colors">TERMS</a>
         <a href="#" className="hover:text-white transition-colors">CONTACT</a>
         <a href="#" className="hover:text-white transition-colors">INSTAGRAM</a>
       </div>
