@@ -47,9 +47,9 @@ const EVENTS = [
 export default function EventDetailPage() {
   const params = useParams();
   
-  // 2. Look at the URL (e.g., /events/1), get the ID number, and find that event in the array
+  
   const eventId = Number(params.id);
-  const currentEvent = EVENTS.find((e) => e.id === eventId) || EVENTS[0]; // Falls back to first event if id doesn't match
+  const currentEvent = EVENTS.find((e) => e.id === eventId) || EVENTS[0];
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white p-4 md:p-8 max-w-5xl mx-auto space-y-8 font-sans">
@@ -66,7 +66,7 @@ export default function EventDetailPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
       </div>
 
-      {/* TITLE & TICKETS - Now updates dynamically! */}
+      {/* TITLE & TICKETS */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-zinc-800 pb-8">
         <div className="space-y-2">
           <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
