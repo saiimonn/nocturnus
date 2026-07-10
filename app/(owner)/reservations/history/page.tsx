@@ -10,12 +10,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Pagination } from "@/components/ui/pagination"
+import {
   Search,
   Filter,
   Calendar,
-  Users,
-  Clock,
-  Armchair,
   Eye,
   XCircle,
   LogIn,
@@ -25,11 +31,14 @@ import { reservations as allReservations, tableMap, events } from "@/lib/mock-da
 
 type FilterStatus = "all" | "cancelled" | "checked_in"
 
+const PAGE_SIZE = 8
+
 export default function BookingHistoryPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all")
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [page, setPage] = useState(1)
 
   const historyStatuses: Reservation["status"][] = ["cancelled", "checked_in"]
   const historyReservations = allReservations.filter((r) =>
@@ -49,12 +58,11 @@ export default function BookingHistoryPage() {
     return matchesSearch && matchesFilter
   })
 
-  const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString("en-PH", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
+  const totalPages = Math.max(1, Math.ceil(filteredReservations.length / PAGE_SIZE))
+  const paginatedReservations = filteredReservations.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE
+  )
 
   const formatDateTime = (iso: string) =>
     new Date(iso).toLocaleDateString("en-PH", {
@@ -133,7 +141,7 @@ export default function BookingHistoryPage() {
           <Input
             placeholder="Search by name, email, or event..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => { setSearchQuery(e.target.value); setPage(1) }}
             className="pl-9"
           />
         </div>
@@ -145,7 +153,7 @@ export default function BookingHistoryPage() {
                 key={status}
                 variant={filterStatus === status ? "secondary" : "ghost"}
                 size="sm"
-                onClick={() => setFilterStatus(status)}
+                onClick={() => { setFilterStatus(status); setPage(1) }}
                 className="capitalize"
               >
                 {status === "checked_in" ? "Checked in" : status}
@@ -166,55 +174,56 @@ export default function BookingHistoryPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4">
-          {filteredReservations.map((r) => {
-            const table = tableMap.get(r.table_id)
-            const event = r.event_id ? events.find((e) => e.id === r.event_id) : null
-            return (
-              <div
-                key={r.id}
-                className="flex flex-col gap-4 rounded-xl border border-border bg-background p-5 shadow-sm transition-shadow hover:shadow-md md:flex-row md:items-center md:justify-between"
-              >
-                <div className="flex flex-1 flex-col gap-3">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="text-lg font-semibold text-foreground">{r.guest_name}</h3>
-                    {getStatusBadge(r.status)}
-                  </div>
-                  <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-4 w-4" />
-                      <span>{formatDate(r.reservation_date)}</span>
-                    </div>
-                    {event && (
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="h-4 w-4" />
-                        <span>{event.title}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-1.5">
-                      <Armchair className="h-4 w-4" />
-                      <span>{table?.label ?? "Unknown"}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Users className="h-4 w-4" />
-                      <span>{r.party_size} guests</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => { setSelectedReservation(r); setIsDetailsOpen(true) }}
-                  >
-                    <Eye className="mr-1 h-4 w-4" />
-                    View Details
-                  </Button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        <>
+          <div className="rounded-xl border border-border bg-background shadow-sm">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Guest</TableHead>
+                  <TableHead>Table</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Party</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedReservations.map((r) => {
+                  const table = tableMap.get(r.table_id)
+                  const event = r.event_id ? events.find((e) => e.id === r.event_id) : null
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-foreground">{r.guest_name}</span>
+                          <span className="text-xs text-muted-foreground">{r.guest_email}</span>
+                          {event && (
+                            <span className="text-xs text-muted-foreground">{event.title}</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{table?.label ?? "Unknown"}</TableCell>
+                      <TableCell className="text-muted-foreground">{formatDateTime(r.reservation_date)}</TableCell>
+                      <TableCell className="text-muted-foreground">{r.party_size}</TableCell>
+                      <TableCell>{getStatusBadge(r.status)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { setSelectedReservation(r); setIsDetailsOpen(true) }}
+                        >
+                          <Eye className="mr-1 h-4 w-4" />
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+        </>
       )}
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>

@@ -12,9 +12,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Pagination } from "@/components/ui/pagination";
 import { Plus, Trash2, Pencil, ToggleLeft, ToggleRight } from "lucide-react";
 import { discountCodes as initialCodes } from "@/lib/mock-data-owner";
 import type { DiscountCode } from "@/lib/types";
+
+const PAGE_SIZE = 8;
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("en-PH", {
@@ -36,6 +47,7 @@ export default function DiscountCodesPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const [newCode, setNewCode] = useState("");
   const [newType, setNewType] = useState<DiscountCode["discount_type"]>(
@@ -56,6 +68,9 @@ export default function DiscountCodesPage() {
   const [editEndDate, setEditEndDate] = useState("");
   const [editUsageLimit, setEditUsageLimit] = useState("");
   const [editMinOrder, setEditMinOrder] = useState("");
+
+  const totalPages = Math.max(1, Math.ceil(codes.length / PAGE_SIZE));
+  const paginatedCodes = codes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const resetAddForm = () => {
     setNewCode("");
@@ -168,6 +183,8 @@ export default function DiscountCodesPage() {
       return;
     }
     setCodes((prev) => prev.filter((c) => c.id !== id));
+    const newTotal = Math.max(1, Math.ceil((codes.length - 1) / PAGE_SIZE));
+    if (page > newTotal) setPage(newTotal);
   };
 
   const canSubmitNew =
@@ -222,49 +239,46 @@ export default function DiscountCodesPage() {
           </Button>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-background shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  <th className="px-4 py-3">Code</th>
-                  <th className="px-4 py-3">Discount</th>
-                  <th className="px-4 py-3">Min. Spend</th>
-                  <th className="px-4 py-3">Validity</th>
-                  <th className="px-4 py-3">Usage</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {codes.map((code) => {
+        <>
+          <div className="rounded-xl border border-border bg-background shadow-sm">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Discount</TableHead>
+                  <TableHead>Min. Spend</TableHead>
+                  <TableHead>Validity</TableHead>
+                  <TableHead>Usage</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedCodes.map((code) => {
                   const usagePercent =
                     code.usage_limit > 0
                       ? Math.round((code.times_used / code.usage_limit) * 100)
                       : 0;
                   return (
-                    <tr
-                      key={code.id}
-                      className="transition-colors hover:bg-muted/50"
-                    >
-                      <td className="px-4 py-3">
+                    <TableRow key={code.id}>
+                      <TableCell>
                         <span className="font-mono font-semibold text-foreground">
                           {code.code}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-foreground">
+                      </TableCell>
+                      <TableCell className="text-foreground">
                         {code.discount_type === "percentage"
                           ? `${code.discount_value}%`
                           : formatCurrency(code.discount_value)}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
                         {formatCurrency(code.min_order_value)}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
                         {formatDate(code.start_date)} –{" "}
                         {formatDate(code.end_date)}
-                      </td>
-                      <td className="px-4 py-3">
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
                           <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
                             <div
@@ -276,8 +290,8 @@ export default function DiscountCodesPage() {
                             {code.times_used}/{code.usage_limit}
                           </span>
                         </div>
-                      </td>
-                      <td className="px-4 py-3">
+                      </TableCell>
+                      <TableCell>
                         <span
                           className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
                             code.is_active
@@ -287,8 +301,8 @@ export default function DiscountCodesPage() {
                         >
                           {code.is_active ? "Active" : "Inactive"}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
+                      </TableCell>
+                      <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"
@@ -320,14 +334,15 @@ export default function DiscountCodesPage() {
                             <Trash2 className="size-4" />
                           </Button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
-        </div>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+        </>
       )}
 
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
