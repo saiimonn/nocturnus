@@ -96,12 +96,7 @@ export interface Reservation {
   guest_contact: string | null
   party_size: number
   qr_code_token: string | null
-  status:
-    | "pending"
-    | "confirmed"
-    | "cancelled"
-    | "completed"
-    | "checked_in"
+  status: "pending" | "confirmed" | "cancelled" | "checked_in"
   created_at: string
   updated_at: string
 }

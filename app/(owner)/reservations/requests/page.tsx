@@ -96,14 +96,12 @@ export default function BookingRequestsPage() {
       pending: "bg-yellow-100 text-yellow-800 border border-yellow-200",
       confirmed: "bg-green-100 text-green-800 border border-green-200",
       cancelled: "bg-red-100 text-red-800 border border-red-200",
-      completed: "bg-muted text-muted-foreground border border-border",
       checked_in: "bg-blue-100 text-blue-800 border border-blue-200",
     }
     const labels: Record<string, string> = {
       pending: "Pending",
       confirmed: "Confirmed",
       cancelled: "Cancelled",
-      completed: "Completed",
       checked_in: "Checked in",
     }
     return (

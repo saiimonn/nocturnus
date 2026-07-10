@@ -157,7 +157,7 @@ The central booking record linking guests, tables, clubs, and optionally, events
 | `guest_contact` | `varchar` | NULLABLE | Guest phone number. |
 | `party_size` | `integer` | NO NULL | Number of people in the party. |
 | `qr_code_token` | `uuid` | NULLABLE | Unique QR token generated on acceptance. Used for door check-in. |
-| `status` | `varchar` | NO NULL | Accepts: `pending`, `confirmed`, `cancelled`, `completed`, `checked_in`. |
+| `status` | `varchar` | NO NULL | Accepts: `pending`, `confirmed`, `cancelled`, `checked_in`. |
 | `created_at` | `timestamp` | NO NULL | Booking creation datetime (UTC). |
 | `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
 > **Note:** `guest_name`, `guest_email`, and `guest_contact` are stored directly on the reservation record to cleanly support walk-ins and guests who book without creating a platform account.

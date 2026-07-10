@@ -17,14 +17,13 @@ import {
   Clock,
   Armchair,
   Eye,
-  CheckCircle,
   XCircle,
   LogIn,
 } from "lucide-react"
 import type { Reservation } from "@/lib/types"
 import { reservations as allReservations, tableMap, events } from "@/lib/mock-data-owner"
 
-type FilterStatus = "all" | "completed" | "cancelled" | "checked_in"
+type FilterStatus = "all" | "cancelled" | "checked_in"
 
 export default function BookingHistoryPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -32,12 +31,11 @@ export default function BookingHistoryPage() {
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
 
-  const historyStatuses: Reservation["status"][] = ["completed", "cancelled", "checked_in"]
+  const historyStatuses: Reservation["status"][] = ["cancelled", "checked_in"]
   const historyReservations = allReservations.filter((r) =>
     historyStatuses.includes(r.status)
   )
 
-  const completedCount = historyReservations.filter((r) => r.status === "completed").length
   const cancelledCount = historyReservations.filter((r) => r.status === "cancelled").length
   const checkedInCount = historyReservations.filter((r) => r.status === "checked_in").length
 
@@ -68,17 +66,14 @@ export default function BookingHistoryPage() {
 
   const getStatusBadge = (status: Reservation["status"]) => {
     const styles: Record<string, string> = {
-      completed: "bg-emerald-100 text-emerald-800 border border-emerald-200",
       cancelled: "bg-slate-100 text-slate-800 border border-slate-200",
       checked_in: "bg-blue-100 text-blue-800 border border-blue-200",
     }
     const labels: Record<string, string> = {
-      completed: "Completed",
       cancelled: "Cancelled",
       checked_in: "Checked in",
     }
-    const icons: Record<string, typeof CheckCircle> = {
-      completed: CheckCircle,
+    const icons: Record<string, typeof XCircle> = {
       cancelled: XCircle,
       checked_in: LogIn,
     }
@@ -102,23 +97,12 @@ export default function BookingHistoryPage() {
         </div>
         <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-4 py-2">
           <span className="text-sm font-medium text-foreground">
-            {completedCount + checkedInCount} resolved
+            {checkedInCount} resolved
           </span>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-xl border border-border bg-background p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
-              <CheckCircle className="h-5 w-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Completed</p>
-              <p className="text-2xl font-semibold text-foreground">{completedCount}</p>
-            </div>
-          </div>
-        </div>
+      <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-xl border border-border bg-background p-4 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
@@ -156,7 +140,7 @@ export default function BookingHistoryPage() {
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <div className="flex gap-1 rounded-md bg-muted p-1">
-            {(["all", "completed", "cancelled", "checked_in"] as FilterStatus[]).map((status) => (
+            {(["all", "cancelled", "checked_in"] as FilterStatus[]).map((status) => (
               <Button
                 key={status}
                 variant={filterStatus === status ? "secondary" : "ghost"}
