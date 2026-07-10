@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { ChevronDown } from "lucide-react"
 import VenueCard from "./components/venueCard"
-import { venues, type Venue } from "@/data/placeholder"
+import { venues, type Venue } from "@/lib/mock-data-user"
 
 const VENUE_TYPES = ["All Venues", "Nightclubs", "Speakeasies", "Lounges", "Rooftops"] as const
 type VenueTypeFilter = (typeof VENUE_TYPES)[number]
