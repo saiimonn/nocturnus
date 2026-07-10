@@ -1,4 +1,4 @@
-import FloorplanCanvas from './floorplanCanvas';
+import FloorplanCanvas from './components/floorplanCanvas';
 
 export default function LayoutEditorPage() {
   return (

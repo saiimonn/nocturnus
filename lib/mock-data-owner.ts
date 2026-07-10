@@ -1,5 +1,6 @@
 import type {
   Club,
+  ClubImage,
   ClubTable,
   Event,
   DiscountCode,
@@ -18,6 +19,37 @@ export const club: Club = {
   created_at: "2025-06-15T10:00:00Z",
   updated_at: "2026-07-10T08:30:00Z",
 }
+
+export const clubImages: ClubImage[] = [
+  {
+    id: "ci1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
+    club_id: club.id,
+    image_url: "/img1.jpg",
+    caption: "Main dance floor",
+    created_at: "2025-07-01T10:00:00Z",
+  },
+  {
+    id: "ci2a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
+    club_id: club.id,
+    image_url: "/img2.jpg",
+    caption: "VIP section",
+    created_at: "2025-07-01T10:00:00Z",
+  },
+  {
+    id: "ci3a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
+    club_id: club.id,
+    image_url: "/img3.jpg",
+    caption: "Bar counter",
+    created_at: "2025-08-15T10:00:00Z",
+  },
+  {
+    id: "ci4a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
+    club_id: club.id,
+    image_url: "/img4.jpg",
+    caption: "Exterior view",
+    created_at: "2025-09-20T10:00:00Z",
+  },
+]
 
 export const clubTables: ClubTable[] = [
   {
