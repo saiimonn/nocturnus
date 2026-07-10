@@ -14,299 +14,205 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
+import { events as initialEvents } from "@/lib/mock-data-owner";
+import type { Event } from "@/lib/types";
 
-interface EventDetails {
-  title: string;
-  event_date: Date;
-  banner_image_urls: string[];
-  description: string;
-  tag: string;
-}
-
-const fakeEventDetails: EventDetails[] = [
-  {
-    title: "The NGHT SHW",
-    event_date: new Date("2026-04-26"),
-    banner_image_urls: ["/img1.jpg", "/img2.jpg", "/img3.jpg"],
-    description:
-      "Lorem Ipsum is simply dummy text of the printing and typesetting.",
-    tag: "Headliner",
-  },
-  {
-    title: "Corechella",
-    event_date: new Date("2026-05-03"),
-    banner_image_urls: ["/img2.jpg", "/img1.jpg"],
-    description: "Late-night house grooves with city skyline visuals.",
-    tag: "Resident DJ",
-  },
-  {
-    title: "Baseline Friday",
-    event_date: new Date("2026-05-10"),
-    banner_image_urls: ["/img3.jpg", "/img2.jpg"],
-    description: "A deep bass takeover with a premium table offer.",
-    tag: "Promo",
-  },
-];
+const statusStyles: Record<Event["status"], string> = {
+  draft: "bg-muted text-muted-foreground",
+  published: "bg-emerald-500/15 text-emerald-600",
+  cancelled: "bg-destructive/15 text-destructive",
+};
 
 export default function EventsPage() {
-  const [events, setEvents] = useState<EventDetails[]>(fakeEventDetails);
+  const [events, setEvents] = useState<Event[]>(initialEvents);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
   const [newTitle, setNewTitle] = useState("");
   const [newDate, setNewDate] = useState("");
-  const [newTag, setNewTag] = useState("");
+  const [newStatus, setNewStatus] = useState<Event["status"]>("draft");
   const [newDescription, setNewDescription] = useState("");
-  const [newImages, setNewImages] = useState("");
-  const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
-  const [newImageObjectUrls, setNewImageObjectUrls] = useState<string[]>([]);
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const [newImageObjectUrl, setNewImageObjectUrl] = useState<string | null>(
+    null,
+  );
+
   const [editTitle, setEditTitle] = useState("");
   const [editDate, setEditDate] = useState("");
-  const [editTag, setEditTag] = useState("");
+  const [editStatus, setEditStatus] = useState<Event["status"]>("draft");
   const [editDescription, setEditDescription] = useState("");
-  const [editImages, setEditImages] = useState("");
-  const [editImageFiles, setEditImageFiles] = useState<File[]>([]);
-  const [editImageObjectUrls, setEditImageObjectUrls] = useState<string[]>([]);
-  const [activeEventIndex, setActiveEventIndex] = useState<number | null>(null);
-  const [activeCarousel, setActiveCarousel] = useState<Record<number, number>>(
-    {},
+  const [editImageUrl, setEditImageUrl] = useState("");
+  const [editImageObjectUrl, setEditImageObjectUrl] = useState<string | null>(
+    null,
   );
-  const formatDate = (date: Date) =>
-    date.toLocaleDateString("en-US", {
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-PH", {
       month: "short",
       day: "numeric",
       year: "numeric",
     });
 
-  const handleCarouselChange = (
-    eventIndex: number,
-    direction: "prev" | "next",
-  ) => {
-    const images = events[eventIndex]?.banner_image_urls ?? [];
-    if (images.length <= 1) return;
+  const findEvent = (id: string) => events.find((e) => e.id === id) ?? null;
 
-    setActiveCarousel((prev) => {
-      const currentIndex = prev[eventIndex] ?? 0;
-      const nextIndex =
-        direction === "next"
-          ? (currentIndex + 1) % images.length
-          : (currentIndex - 1 + images.length) % images.length;
-      return { ...prev, [eventIndex]: nextIndex };
-    });
-  };
-
-  const handleOpenDetails = (index: number) => {
-    setActiveEventIndex(index);
-    setActiveCarousel((prev) => ({ ...prev, [index]: 0 }));
-  };
-
-  const handleDeleteEvent = (index: number) => {
+  const handleDeleteEvent = (id: string) => {
     if (!window.confirm("Delete this event? This action cannot be undone.")) {
       return;
     }
-    setEvents((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
-    if (activeEventIndex === index) {
-      setActiveEventIndex(null);
-    }
-    if (editIndex === index) {
+    setEvents((prev) => prev.filter((e) => e.id !== id));
+    if (activeId === id) setActiveId(null);
+    if (editId === id) {
       setIsEditOpen(false);
-      setEditIndex(null);
+      setEditId(null);
     }
+  };
+
+  const resetAddForm = () => {
+    setNewTitle("");
+    setNewDate("");
+    setNewStatus("draft");
+    setNewDescription("");
+    setNewImageUrl("");
+    if (newImageObjectUrl) URL.revokeObjectURL(newImageObjectUrl);
+    setNewImageObjectUrl(null);
   };
 
   const handleAddEvent = () => {
     if (!newTitle.trim() || !newDate.trim() || !newDescription.trim()) return;
 
-    const imageUrls = newImages
-      .split(",")
-      .map((value) => value.trim())
-      .filter(Boolean);
+    const image = newImageObjectUrl ?? (newImageUrl.trim() || null);
 
-    const fileUrls = newImageObjectUrls;
-    const allImages = [...imageUrls, ...fileUrls].filter(Boolean);
-
-    if (allImages.length === 0) return;
-
-    const nextEvent: EventDetails = {
+    const nextEvent: Event = {
+      id: crypto.randomUUID(),
+      club_id: initialEvents[0]?.club_id ?? "",
       title: newTitle.trim(),
-      event_date: new Date(`${newDate}T00:00:00`),
-      banner_image_urls: allImages,
       description: newDescription.trim(),
-      tag: newTag.trim() || "Promo",
+      image_url: image,
+      event_date: new Date(`${newDate}T00:00:00`).toISOString(),
+      status: newStatus,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
     setEvents((prev) => [nextEvent, ...prev]);
     setIsAddOpen(false);
-    setNewTitle("");
-    setNewDate("");
-    setNewTag("");
-    setNewDescription("");
-    setNewImages("");
-    setNewImageFiles([]);
-    setNewImageObjectUrls([]);
+    resetAddForm();
   };
 
-  const handleOpenEdit = (index: number) => {
-    const event = events[index];
+  const resetEditForm = () => {
+    setEditTitle("");
+    setEditDate("");
+    setEditStatus("draft");
+    setEditDescription("");
+    setEditImageUrl("");
+    if (editImageObjectUrl) URL.revokeObjectURL(editImageObjectUrl);
+    setEditImageObjectUrl(null);
+  };
+
+  const handleOpenEdit = (id: string) => {
+    const event = findEvent(id);
     if (!event) return;
-    setEditIndex(index);
+    setEditId(id);
     setEditTitle(event.title);
-    setEditDate(event.event_date.toISOString().slice(0, 10));
-    setEditTag(event.tag);
-    setEditDescription(event.description);
-    setEditImages(event.banner_image_urls.join(", "));
-    setEditImageFiles([]);
-    setEditImageObjectUrls([]);
+    setEditDate(event.event_date.slice(0, 10));
+    setEditStatus(event.status);
+    setEditDescription(event.description ?? "");
+    setEditImageUrl(event.image_url ?? "");
+    if (editImageObjectUrl) URL.revokeObjectURL(editImageObjectUrl);
+    setEditImageObjectUrl(null);
     setIsEditOpen(true);
   };
 
   const handleEditSave = () => {
-    if (editIndex === null) return;
+    if (editId === null) return;
     if (!editTitle.trim() || !editDate.trim() || !editDescription.trim())
       return;
 
-    const imageUrls = editImages
-      .split(",")
-      .map((value) => value.trim())
-      .filter(Boolean);
-
-    const fileUrls = editImageObjectUrls;
-    const allImages = [...imageUrls, ...fileUrls].filter(Boolean);
-
-    if (allImages.length === 0) return;
+    const image = editImageObjectUrl ?? (editImageUrl.trim() || null);
 
     setEvents((prev) =>
-      prev.map((event, index) =>
-        index === editIndex
+      prev.map((event) =>
+        event.id === editId
           ? {
               ...event,
               title: editTitle.trim(),
-              event_date: new Date(`${editDate}T00:00:00`),
-              banner_image_urls: allImages,
+              event_date: new Date(`${editDate}T00:00:00`).toISOString(),
+              status: editStatus,
               description: editDescription.trim(),
-              tag: editTag.trim() || "Promo",
+              image_url: image,
+              updated_at: new Date().toISOString(),
             }
           : event,
       ),
     );
 
     setIsEditOpen(false);
-    setEditIndex(null);
-    setEditTitle("");
-    setEditDate("");
-    setEditTag("");
-    setEditDescription("");
-    setEditImages("");
-    setEditImageFiles([]);
-    setEditImageObjectUrls([]);
+    setEditId(null);
+    resetEditForm();
   };
 
-  const handleImageFilesChange = (
+  const handleNewImageFileChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const files = Array.from(event.target.files ?? []);
-    if (files.length === 0) return;
-    setNewImageFiles((prev) => [...prev, ...files]);
-    setNewImageObjectUrls((prev) => [
-      ...prev,
-      ...files.map((file) => URL.createObjectURL(file)),
-    ]);
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (newImageObjectUrl) URL.revokeObjectURL(newImageObjectUrl);
+    setNewImageObjectUrl(URL.createObjectURL(file));
     event.target.value = "";
   };
 
-  const handleEditImageFilesChange = (
+  const handleEditImageFileChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const files = Array.from(event.target.files ?? []);
-    if (files.length === 0) return;
-    setEditImageFiles((prev) => [...prev, ...files]);
-    setEditImageObjectUrls((prev) => [
-      ...prev,
-      ...files.map((file) => URL.createObjectURL(file)),
-    ]);
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (editImageObjectUrl) URL.revokeObjectURL(editImageObjectUrl);
+    setEditImageObjectUrl(URL.createObjectURL(file));
     event.target.value = "";
-  };
-
-  const handleRemoveNewImage = (index: number, type: "url" | "upload") => {
-    if (type === "url") {
-      const nextUrls = imageUrls.filter((_, itemIndex) => itemIndex !== index);
-      setNewImages(nextUrls.join(", "));
-      return;
-    }
-
-    const removedUrl = newImageObjectUrls[index];
-    if (removedUrl) URL.revokeObjectURL(removedUrl);
-    setNewImageFiles((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
-    setNewImageObjectUrls((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
-  };
-
-  const handleRemoveEditImage = (index: number, type: "url" | "upload") => {
-    if (type === "url") {
-      const nextUrls = editImageUrls.filter((_, itemIndex) => itemIndex !== index);
-      setEditImages(nextUrls.join(", "));
-      return;
-    }
-
-    const removedUrl = editImageObjectUrls[index];
-    if (removedUrl) URL.revokeObjectURL(removedUrl);
-    setEditImageFiles((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
-    setEditImageObjectUrls((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
   };
 
   useEffect(() => {
     return () => {
-      newImageObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+      if (newImageObjectUrl) URL.revokeObjectURL(newImageObjectUrl);
+      if (editImageObjectUrl) URL.revokeObjectURL(editImageObjectUrl);
     };
-  }, [newImageObjectUrls]);
+  }, [newImageObjectUrl, editImageObjectUrl]);
 
-  useEffect(() => {
-    return () => {
-      editImageObjectUrls.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, [editImageObjectUrls]);
+  const newImagePreview = newImageObjectUrl ?? (newImageUrl.trim() || null);
+  const editImagePreview = editImageObjectUrl ?? (editImageUrl.trim() || null);
 
-  const imageUrls = newImages
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
-  const hasImages = imageUrls.length > 0 || newImageObjectUrls.length > 0;
-  const canSubmitNewEvent =
+  const canSubmitNew =
     newTitle.trim().length > 0 &&
     newDate.trim().length > 0 &&
-    newDescription.trim().length > 0 &&
-    hasImages;
+    newDescription.trim().length > 0;
 
-  const editImageUrls = editImages
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
-  const editHasImages =
-    editImageUrls.length > 0 || editImageObjectUrls.length > 0;
-  const canSubmitEditEvent =
+  const canSubmitEdit =
     editTitle.trim().length > 0 &&
     editDate.trim().length > 0 &&
-    editDescription.trim().length > 0 &&
-    editHasImages;
+    editDescription.trim().length > 0;
+
+  const activeEvent = activeId ? findEvent(activeId) : null;
 
   return (
     <div className="flex flex-col gap-6 p-4">
-      <div className = "flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-background/70 p-6 shadow-sm">
-        <div className = "space-y-2">
-          <h1 className="text-3xl font-semibold text-foreground">Club Events</h1>
-          <p className = "text-sm text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-background/70 p-6 shadow-sm">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-semibold text-foreground">
+            Club Events
+          </h1>
+          <p className="text-sm text-muted-foreground">
             Promote upcoming nights, resident DJs, and special promos.
           </p>
         </div>
 
-        <Button
-          onClick={() => setIsAddOpen(true)}
-          className = "px-4"
-        >
+        <Button onClick={() => setIsAddOpen(true)} className="px-4">
           <Plus />
           Add Event
         </Button>
       </div>
-      
+
       {events.length === 0 ? (
         <div className="flex min-h-90 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30">
           <h3 className="text-xl font-semibold text-foreground">
@@ -326,141 +232,117 @@ export default function EventsPage() {
         </div>
       ) : (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {events.map((event, index) => (
+          {events.map((event) => (
             <div
-              key={index}
+              key={event.id}
               className="overflow-hidden rounded-xl border border-border bg-background shadow-sm"
             >
               <div className="relative h-44 w-full overflow-hidden">
-                <Image
-                  src={event.banner_image_urls[activeCarousel[index] ?? 0]}
-                  alt={event.title}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                />
+                {event.image_url ? (
+                  <Image
+                    src={event.image_url}
+                    alt={event.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-muted text-sm text-muted-foreground">
+                    No image
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/10 to-transparent" />
                 <div className="absolute bottom-3 left-3 text-xs font-semibold uppercase tracking-[0.2em] text-white/80">
                   {formatDate(event.event_date)}
                 </div>
-                {event.banner_image_urls.length > 1 && (
-                  <div className="absolute bottom-3 right-3 flex items-center gap-1">
-                    <Button
-                      variant="secondary"
-                      size="icon-sm"
-                      onClick={() => handleCarouselChange(index, "prev")}
-                    >
-                      ‹
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="icon-sm"
-                      onClick={() => handleCarouselChange(index, "next")}
-                    >
-                      ›
-                    </Button>
-                  </div>
-                )}
               </div>
               <div className="flex flex-col gap-3 p-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-foreground">
-                    {event.title}
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-semibold text-foreground">
+                      {event.title}
+                    </h2>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${statusStyles[event.status]}`}
+                    >
+                      {event.status}
+                    </span>
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     {event.description}
                   </p>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                    {event.tag}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenDetails(index)}
-                    >
-                      View
-                    </Button>
-                    <Button size="sm" onClick={() => handleOpenEdit(index)}>
-                      Edit
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteEvent(index)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setActiveId(event.id)}
+                  >
+                    View
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenEdit(event.id)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleDeleteEvent(event.id)}
+                  >
+                    Delete
+                  </Button>
                 </div>
               </div>
             </div>
           ))}
         </div>
       )}
+
       <Dialog
-        open={activeEventIndex !== null}
-        onOpenChange={() => setActiveEventIndex(null)}
+        open={activeEvent !== null}
+        onOpenChange={() => setActiveId(null)}
       >
         <DialogContent>
-          {activeEventIndex !== null && (
+          {activeEvent && (
             <>
               <DialogHeader>
-                <DialogTitle>{events[activeEventIndex].title}</DialogTitle>
-                <DialogDescription>
-                  {formatDate(events[activeEventIndex].event_date)}
+                <DialogTitle>{activeEvent.title}</DialogTitle>
+                <DialogDescription className="flex items-center gap-2">
+                  {formatDate(activeEvent.event_date)}
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${statusStyles[activeEvent.status]}`}
+                  >
+                    {activeEvent.status}
+                  </span>
                 </DialogDescription>
               </DialogHeader>
               <div className="mt-4 grid gap-4">
-                <div className="relative h-56 w-full overflow-hidden rounded-lg">
-                  <Image
-                    src={
-                      events[activeEventIndex].banner_image_urls[
-                        activeCarousel[activeEventIndex] ?? 0
-                      ]
-                    }
-                    alt={events[activeEventIndex].title}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 480px"
-                  />
-                  {events[activeEventIndex].banner_image_urls.length > 1 && (
-                    <div className="absolute bottom-3 right-3 flex items-center gap-1">
-                      <Button
-                        variant="secondary"
-                        size="icon-sm"
-                        onClick={() =>
-                          handleCarouselChange(activeEventIndex, "prev")
-                        }
-                      >
-                        ‹
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="icon-sm"
-                        onClick={() =>
-                          handleCarouselChange(activeEventIndex, "next")
-                        }
-                      >
-                        ›
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                {activeEvent.image_url ? (
+                  <div className="relative h-56 w-full overflow-hidden rounded-lg">
+                    <Image
+                      src={activeEvent.image_url}
+                      alt={activeEvent.title}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 480px"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-56 w-full items-center justify-center rounded-lg bg-muted text-sm text-muted-foreground">
+                    No image
+                  </div>
+                )}
                 <p className="text-sm text-muted-foreground">
-                  {events[activeEventIndex].description}
+                  {activeEvent.description}
                 </p>
-                <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                  {events[activeEventIndex].tag}
-                </div>
               </div>
               <div className="mt-4 flex justify-end">
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={() => handleDeleteEvent(activeEventIndex)}
+                  onClick={() => handleDeleteEvent(activeEvent.id)}
                 >
                   Delete Event
                 </Button>
@@ -469,6 +351,7 @@ export default function EventsPage() {
           )}
         </DialogContent>
       </Dialog>
+
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
         <DialogContent>
           <DialogHeader>
@@ -510,76 +393,57 @@ export default function EventsPage() {
             </div>
             <div className="grid gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                Tag
+                Status
               </label>
-              <Input
-                placeholder="Promo"
-                value={newTag}
-                onChange={(event) => setNewTag(event.target.value)}
-              />
+              <select
+                className="rounded-md border border-input bg-transparent px-2.5 py-2 text-sm text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                value={newStatus}
+                onChange={(event) =>
+                  setNewStatus(event.target.value as Event["status"])
+                }
+              >
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
             </div>
             <div className="grid gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                Images
+                Image
               </label>
               <Input
                 type="file"
                 accept="image/*"
-                multiple
-                onChange={handleImageFilesChange}
+                onChange={handleNewImageFileChange}
+              />
+              <Input
+                placeholder="https://example.com/banner.jpg"
+                value={newImageUrl}
+                onChange={(event) => setNewImageUrl(event.target.value)}
               />
               <span className="text-xs text-muted-foreground">
-                Paste URLs separated by commas or upload images.
+                Upload a file or paste an image URL.
               </span>
-              {!hasImages && (
-                <span className="text-xs text-destructive">
-                  Add at least one image.
-                </span>
-              )}
-              {(imageUrls.length > 0 || newImageObjectUrls.length > 0) && (
-                <div className="flex flex-wrap gap-2">
-                  {imageUrls.map((url, index) => (
-                    <div
-                      key={`url-${index}`}
-                      className="relative h-16 w-16 overflow-hidden rounded-md border border-border"
-                    >
-                      <Image
-                        src={url}
-                        alt="Preview"
-                        width={64}
-                        height={64}
-                        className="h-full w-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[10px] text-white"
-                        onClick={() => handleRemoveNewImage(index, "url")}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                  {newImageObjectUrls.map((url, index) => (
-                    <div
-                      key={`upload-${index}`}
-                      className="relative h-16 w-16 overflow-hidden rounded-md border border-border"
-                    >
-                      <Image
-                        src={url}
-                        alt="Upload preview"
-                        width={64}
-                        height={64}
-                        className="h-full w-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[10px] text-white"
-                        onClick={() => handleRemoveNewImage(index, "upload")}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+              {newImagePreview && (
+                <div className="relative h-24 w-24 overflow-hidden rounded-md border border-border">
+                  <Image
+                    src={newImagePreview}
+                    alt="Preview"
+                    width={96}
+                    height={96}
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[10px] text-white"
+                    onClick={() => {
+                      if (newImageObjectUrl) URL.revokeObjectURL(newImageObjectUrl);
+                      setNewImageObjectUrl(null);
+                      setNewImageUrl("");
+                    }}
+                  >
+                    ×
+                  </button>
                 </div>
               )}
             </div>
@@ -611,20 +475,19 @@ export default function EventsPage() {
             <Button
               size="sm"
               onClick={handleAddEvent}
-              disabled={!canSubmitNewEvent}
+              disabled={!canSubmitNew}
             >
               Add Event
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Event</DialogTitle>
-            <DialogDescription>
-              Update event details and images.
-            </DialogDescription>
+            <DialogDescription>Update event details.</DialogDescription>
           </DialogHeader>
           <div className="mt-4 grid gap-3">
             <div className="grid gap-1.5">
@@ -659,81 +522,57 @@ export default function EventsPage() {
             </div>
             <div className="grid gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                Tag
+                Status
               </label>
-              <Input
-                placeholder="Promo"
-                value={editTag}
-                onChange={(event) => setEditTag(event.target.value)}
-              />
+              <select
+                className="rounded-md border border-input bg-transparent px-2.5 py-2 text-sm text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                value={editStatus}
+                onChange={(event) =>
+                  setEditStatus(event.target.value as Event["status"])
+                }
+              >
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
             </div>
             <div className="grid gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                Images
+                Image
               </label>
-              <Input
-                placeholder="/img1.jpg, /img2.jpg"
-                value={editImages}
-                onChange={(event) => setEditImages(event.target.value)}
-              />
               <Input
                 type="file"
                 accept="image/*"
-                multiple
-                onChange={handleEditImageFilesChange}
+                onChange={handleEditImageFileChange}
+              />
+              <Input
+                placeholder="https://example.com/banner.jpg"
+                value={editImageUrl}
+                onChange={(event) => setEditImageUrl(event.target.value)}
               />
               <span className="text-xs text-muted-foreground">
-                Paste URLs separated by commas or upload images.
+                Upload a file or paste an image URL.
               </span>
-              {!editHasImages && (
-                <span className="text-xs text-destructive">
-                  Add at least one image.
-                </span>
-              )}
-              {(editImageUrls.length > 0 || editImageObjectUrls.length > 0) && (
-                <div className="flex flex-wrap gap-2">
-                  {editImageUrls.map((url, index) => (
-                    <div
-                      key={`edit-url-${index}`}
-                      className="relative h-16 w-16 overflow-hidden rounded-md border border-border"
-                    >
-                      <Image
-                        src={url}
-                        alt="Preview"
-                        width={64}
-                        height={64}
-                        className="h-full w-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[10px] text-white"
-                        onClick={() => handleRemoveEditImage(index, "url")}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                  {editImageObjectUrls.map((url, index) => (
-                    <div
-                      key={`edit-upload-${index}`}
-                      className="relative h-16 w-16 overflow-hidden rounded-md border border-border"
-                    >
-                      <Image
-                        src={url}
-                        alt="Upload preview"
-                        width={64}
-                        height={64}
-                        className="h-full w-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[10px] text-white"
-                        onClick={() => handleRemoveEditImage(index, "upload")}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+              {editImagePreview && (
+                <div className="relative h-24 w-24 overflow-hidden rounded-md border border-border">
+                  <Image
+                    src={editImagePreview}
+                    alt="Preview"
+                    width={96}
+                    height={96}
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[10px] text-white"
+                    onClick={() => {
+                      if (editImageObjectUrl) URL.revokeObjectURL(editImageObjectUrl);
+                      setEditImageObjectUrl(null);
+                      setEditImageUrl("");
+                    }}
+                  >
+                    ×
+                  </button>
                 </div>
               )}
             </div>
@@ -765,7 +604,7 @@ export default function EventsPage() {
             <Button
               size="sm"
               onClick={handleEditSave}
-              disabled={!canSubmitEditEvent}
+              disabled={!canSubmitEdit}
             >
               Save Changes
             </Button>

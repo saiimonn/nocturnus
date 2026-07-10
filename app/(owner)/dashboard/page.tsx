@@ -1,101 +1,109 @@
-import { Button } from "@/components/ui/button";
+import Link from "next/link"
+import { buttonVariants } from "@/components/ui/button"
+import {
+  club,
+  clubTables,
+  events,
+  discountCodes,
+  reservations,
+  tableMap,
+} from "@/lib/mock-data-owner"
+
+const now = new Date()
+
+const greeting =
+  now.getHours() < 12
+    ? "Good morning"
+    : now.getHours() < 18
+      ? "Good afternoon"
+      : "Good evening"
+
+const pending = reservations.filter((r) => r.status === "pending")
+const confirmed = reservations.filter((r) => r.status === "confirmed")
+const activeTables = clubTables.filter((t) => t.is_available)
+const upcomingEvents = events.filter(
+  (e) => e.status === "published" && new Date(e.event_date) > now
+)
+const activePromos = discountCodes.filter(
+  (d) => d.is_active && new Date(d.end_date) > now
+)
+
+const estimatedRevenue = confirmed.reduce((sum, r) => {
+  const table = tableMap.get(r.table_id)
+  return sum + (table?.minimum_spend ?? 0)
+}, 0)
+
+const totalPartySize = reservations.reduce((sum, r) => sum + r.party_size, 0)
 
 const stats = [
   {
-    label: "Total revenue",
-    value: "$138,920",
-    delta: "+9.7%",
-    helper: "vs last 30 days",
+    label: "Total Reservations",
+    value: reservations.length.toString(),
+    sub: "all time",
   },
   {
-    label: "Tickets sold",
-    value: "9,816",
-    delta: "+11.3%",
-    helper: "rolling 30 days",
+    label: "Pending Requests",
+    value: pending.length.toString(),
+    sub: "awaiting review",
+    highlight: pending.length > 0,
   },
   {
-    label: "Avg spend",
-    value: "$42.10",
-    delta: "+4.5%",
-    helper: "per guest",
+    label: "Confirmed Bookings",
+    value: confirmed.length.toString(),
+    sub: "upcoming",
   },
   {
-    label: "Upcoming events",
-    value: "7",
-    delta: "+3",
-    helper: "next 14 days",
+    label: "Active Tables",
+    value: `${activeTables.length} / ${clubTables.length}`,
+    sub: "available on floor",
   },
   {
-    label: "Floor occupancy",
-    value: "88%",
-    delta: "+6%",
-    helper: "Fri-Sun avg",
+    label: "Upcoming Events",
+    value: upcomingEvents.length.toString(),
+    sub: "published",
   },
   {
-    label: "New members",
-    value: "286",
-    delta: "+21%",
-    helper: "last 7 days",
+    label: "Active Promos",
+    value: activePromos.length.toString(),
+    sub: "discount codes",
   },
-];
+]
 
-const flowStages = [
-  {
-    title: "Discover",
-    detail: "Search + social referrals",
-    metric: "24%",
-  },
-  {
-    title: "Reserve",
-    detail: "Ticket + table booking",
-    metric: "12%",
-  },
-  {
-    title: "Check-in",
-    detail: "Door + VIP validation",
-    metric: "9%",
-  },
-  {
-    title: "On-floor",
-    detail: "Spend + stay duration",
-    metric: "7%",
-  },
-  {
-    title: "Return",
-    detail: "Membership retention",
-    metric: "4%",
-  },
-];
+const recentReservations = [...reservations]
+  .sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )
+  .slice(0, 5)
 
-const activity = [
-  {
-    title: "Friday Night Live sold out",
-    time: "2 hours ago",
-    note: "VIP tables at 98% capacity",
-  },
-  {
-    title: "DJ Corechella added",
-    time: "5 hours ago",
-    note: "Event boosted in social feed",
-  },
-  {
-    title: "Table 4 moved to premium",
-    time: "Yesterday",
-    note: "+$1,200 projected revenue",
-  },
-  {
-    title: "Member tier upgrades",
-    time: "2 days ago",
-    note: "32 guests moved to Gold",
-  },
-];
+const statusStyles: Record<string, string> = {
+  pending:
+    "bg-yellow-100 text-yellow-800 border border-yellow-200",
+  confirmed:
+    "bg-green-100 text-green-800 border border-green-200",
+  checked_in:
+    "bg-blue-100 text-blue-800 border border-blue-200",
+  completed:
+    "bg-muted text-muted-foreground border border-border",
+  cancelled:
+    "bg-red-100 text-red-800 border border-red-200",
+}
 
-const peakNights = [
-  { label: "Friday", value: 92 },
-  { label: "Saturday", value: 86 },
-  { label: "Thursday", value: 64 },
-  { label: "Wednesday", value: 42 },
-];
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-PH", {
+    month: "short",
+    day: "numeric",
+  })
+}
+
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleDateString("en-PH", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
 
 export default function OwnerDashboardPage() {
   return (
@@ -103,15 +111,22 @@ export default function OwnerDashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-background/70 p-6 shadow-sm">
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold text-foreground">
-            Good evening, Bro
+            {greeting}, {club.name}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Track the night, manage events, and keep guest flow smooth.
+            {club.address}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline">View bookings</Button>
-          <Button>Create event</Button>
+          <Link
+            href="/booking/requests"
+            className={buttonVariants({ variant: "outline" })}
+          >
+            View bookings
+          </Link>
+          <Link href="/events" className={buttonVariants()}>
+            Create event
+          </Link>
         </div>
       </div>
 
@@ -128,38 +143,51 @@ export default function OwnerDashboardPage() {
                   {stat.value}
                 </p>
               </div>
-              <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">
-                {stat.delta}
-              </span>
+              {stat.highlight && (
+                <span className="rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-semibold text-yellow-800 border border-yellow-200">
+                  Action needed
+                </span>
+              )}
             </div>
-            <p className="text-xs text-muted-foreground">{stat.helper}</p>
+            <p className="text-xs text-muted-foreground">{stat.sub}</p>
           </div>
         ))}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_1.2fr]">
         <div className="rounded-2xl border border-border bg-background p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">
-              Night outlook
-            </h2>
-          </div>
+          <h2 className="text-lg font-semibold text-foreground">
+            Tonight&apos;s overview
+          </h2>
           <div className="mt-4 grid gap-3 text-sm text-muted-foreground">
             <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
-              <span>VIP tables remaining</span>
-              <span className="font-medium text-foreground">6</span>
+              <span>Reservations today</span>
+              <span className="font-medium text-foreground">
+                {
+                  reservations.filter(
+                    (r) =>
+                      formatDate(r.reservation_date) === formatDate(now.toISOString())
+                  ).length
+                }
+              </span>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
-              <span>Projected bar sales</span>
-              <span className="font-medium text-foreground">$18.4k</span>
+              <span>Total party size</span>
+              <span className="font-medium text-foreground">
+                {totalPartySize} guests
+              </span>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
-              <span>Staffing coverage</span>
-              <span className="font-medium text-foreground">92%</span>
+              <span>Estimated revenue</span>
+              <span className="font-medium text-foreground">
+                ₱{estimatedRevenue.toLocaleString()}
+              </span>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
-              <span>Security alert</span>
-              <span className="font-medium text-foreground">All clear</span>
+              <span>Tables available</span>
+              <span className="font-medium text-foreground">
+                {activeTables.length} of {clubTables.length}
+              </span>
             </div>
           </div>
         </div>
@@ -167,29 +195,88 @@ export default function OwnerDashboardPage() {
         <div className="rounded-2xl border border-border bg-background p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-foreground">
-              Activity feed
+              Recent reservations
             </h2>
+            <Link
+              href="/booking/requests"
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+            >
+              View all
+            </Link>
           </div>
           <div className="mt-5 grid gap-4">
-            {activity.map((item) => (
-              <div
-                key={item.title}
-                className="flex flex-col gap-1 rounded-xl border border-border/60 bg-muted/20 p-4"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-foreground">
-                    {item.title}
+            {recentReservations.map((r) => {
+              const table = tableMap.get(r.table_id)
+              return (
+                <div
+                  key={r.id}
+                  className="flex flex-col gap-1 rounded-xl border border-border/60 bg-muted/20 p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-foreground">
+                      {r.guest_name}
+                    </p>
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusStyles[r.status]}`}
+                    >
+                      {r.status.replace("_", " ")}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {table?.label ?? "Unknown table"} &middot;{" "}
+                    {r.party_size} pax &middot;{" "}
+                    {formatDateTime(r.reservation_date)}
                   </p>
-                  <span className="text-xs text-muted-foreground">
-                    {item.time}
-                  </span>
                 </div>
-                <p className="text-xs text-muted-foreground">{item.note}</p>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </div>
+
+      <div className="rounded-2xl border border-border bg-background p-6 shadow-sm">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-foreground">
+            Upcoming events
+          </h2>
+            <Link
+              href="/events"
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+            >
+              View all
+            </Link>
+        </div>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          {upcomingEvents.map((event) => (
+            <div
+              key={event.id}
+              className="flex flex-col gap-1 rounded-xl border border-border/60 bg-muted/20 p-4"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground">
+                  {event.title}
+                </p>
+                <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800 border border-green-200">
+                  {event.status}
+                </span>
+              </div>
+              {event.description && (
+                <p className="text-xs text-muted-foreground line-clamp-2">
+                  {event.description}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {formatDateTime(event.event_date)}
+              </p>
+            </div>
+          ))}
+          {upcomingEvents.length === 0 && (
+            <p className="text-sm text-muted-foreground col-span-full">
+              No upcoming published events.
+            </p>
+          )}
+        </div>
+      </div>
     </div>
-  );
+  )
 }
