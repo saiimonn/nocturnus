@@ -107,7 +107,7 @@ export default function EventListing() {
         />
       </div>
 
-      <div className="mt-8 flex flex-wrap items-center gap-3">
+      <div className="mt-8 flex flex-wrap items-center gap-3 mb-8">
         {filters.map((filter) => (
           <button
             key={filter}
