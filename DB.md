@@ -30,7 +30,7 @@ Before diving into the tables, here are the core rules applied across the databa
 ## 🗄️ Table Definitions
 
 ### 1. `Users`
-Core identity table for all platform users (guests, owners, and admins).
+Core identity table for platform users. Only `owner` and `admin` roles have accounts. Guests do not register — they submit reservations via a form and receive email confirmations directly.
 
 | Column | Type | Constraints | Description |
 | :--- | :--- | :--- | :--- |
@@ -39,7 +39,7 @@ Core identity table for all platform users (guests, owners, and admins).
 | `email` | `varchar` | NO NULL, UNIQUE| Unique email address. |
 | `contact_number`| `varchar` | NULLABLE | Mobile / contact number. |
 | `password_hash` | `varchar` | NO NULL | Bcrypt-hashed password. |
-| `role` | `varchar` | NO NULL | Accepts: `guest`, `owner`, or `admin`. |
+| `role` | `varchar` | NO NULL | Accepts: `owner` or `admin`. |
 | `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
 | `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
 
@@ -68,6 +68,7 @@ The primary entity for a nightclub venue.
 | `cover_image_url`| `varchar` | NULLABLE | URL to cover photo in object storage. |
 | `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
 | `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
+| `slug` | `varchar` | NO NULL, UNIQUE | Identifier for club. |
 
 ### 4. `Club_Images`
 Additional gallery images for a specific club.
