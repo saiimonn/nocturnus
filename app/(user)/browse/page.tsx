@@ -3,38 +3,23 @@
 import { useState, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { ChevronDown } from "lucide-react"
 import VenueCard from "./components/venueCard"
-import { venues, type Venue } from "@/lib/mock-data-user"
-
-const VENUE_TYPES = ["All Venues", "Nightclubs", "Speakeasies", "Lounges", "Rooftops"] as const
-type VenueTypeFilter = (typeof VENUE_TYPES)[number]
-
-const TYPE_MAP: Record<VenueTypeFilter, Venue["type"] | null> = {
-  "All Venues": null,
-  Nightclubs: "Nightclub",
-  Speakeasies: "Speakeasy",
-  Lounges: "Lounge",
-  Rooftops: "Rooftop",
-}
+import { venues } from "@/lib/mock-data-user"
 
 export default function BrowsePage() {
-  const [activeType, setActiveType] = useState<VenueTypeFilter>("All Venues")
-  const [activeVenueId, setActiveVenueId] = useState<number | null>(null)
+  const [activeVenueId, setActiveVenueId] = useState<string | null>(null)
   const searchParams = useSearchParams()
   const query = searchParams.get("q")?.trim().toLowerCase() ?? ""
 
   const filteredVenues = useMemo(() => {
-    const wantedType = TYPE_MAP[activeType]
     return venues.filter((venue) => {
-      const matchesType = !wantedType || venue.type === wantedType
-      const matchesQuery =
+      return (
         !query ||
         venue.name.toLowerCase().includes(query) ||
-        venue.location.toLowerCase().includes(query)
-      return matchesType && matchesQuery
+        venue.address.toLowerCase().includes(query)
+      )
     })
-  }, [activeType, query])
+  }, [query])
 
   return (
     <div className="min-h-screen w-full bg-black px-8 py-12 text-white md:px-16">
@@ -72,11 +57,8 @@ export default function BrowsePage() {
             >
               <VenueCard
                 name={venue.name}
-                location={venue.location}
-                imageSrc={venue.imageSrc}
-                badge={venue.badge}
-                availability={venue.availability}
-                tablesAvailable={venue.tablesAvailable}
+                address={venue.address}
+                cover_image_url={venue.cover_image_url}
               />
             </Link>
           ))}
