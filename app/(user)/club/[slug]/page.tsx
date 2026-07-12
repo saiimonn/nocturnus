@@ -1,6 +1,6 @@
 import Image from "next/image"
 import { notFound } from "next/navigation"
-import { getVenueBySlug, venues } from "@/data/placeholder"
+import { getVenueBySlug, venues } from "@/lib/mock-data-user"
 
 export function generateStaticParams() {
   return venues.map((venue) => ({ slug: venue.slug }))
