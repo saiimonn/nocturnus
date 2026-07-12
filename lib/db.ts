@@ -1,7 +1,7 @@
 export interface Database {
   public: {
     Tables: {
-      Users: {
+      users: {
         Row: {
           id: string
           full_name: string
@@ -33,7 +33,7 @@ export interface Database {
           updated_at?: string
         }
       }
-      Owner_Verification_Tokens: {
+      owner_verification_tokens: {
         Row: {
           id: string
           token_hash: string
@@ -56,7 +56,7 @@ export interface Database {
           created_at?: string
         }
       }
-      Clubs: {
+      clubs: {
         Row: {
           id: string
           owner_id: string
@@ -94,7 +94,7 @@ export interface Database {
           updated_at?: string
         }
       }
-      Club_Images: {
+      club_images: {
         Row: {
           id: string
           club_id: string
@@ -117,7 +117,7 @@ export interface Database {
           created_at?: string
         }
       }
-      Floor_Plans: {
+      floor_plans: {
         Row: {
           id: string
           club_id: string
@@ -143,7 +143,7 @@ export interface Database {
           updated_at?: string
         }
       }
-      Club_Tables: {
+      club_tables: {
         Row: {
           id: string
           floor_plan_id: string
@@ -187,7 +187,7 @@ export interface Database {
           updated_at?: string
         }
       }
-      Events: {
+      events: {
         Row: {
           id: string
           club_id: string
@@ -222,7 +222,7 @@ export interface Database {
           updated_at?: string
         }
       }
-      Discount_Codes: {
+      discount_codes: {
         Row: {
           id: string
           club_id: string
@@ -263,7 +263,7 @@ export interface Database {
           min_order_value?: number
         }
       }
-      Reservations: {
+      reservations: {
         Row: {
           id: string
           table_id: string
