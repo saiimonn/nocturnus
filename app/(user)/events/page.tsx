@@ -1,7 +1,7 @@
 'use client'
 
 import DateRangeFilter from "@/components/dateRangeFilter"
-import EventCard from "@/app/(user)/currentEvents/components/userEventCard"
+import EventCard from "@/app/(user)/events/components/userEventCard"
 import { useState, useMemo } from "react"
 import { events, getVenueByClubId } from "@/lib/mock-data-user"
 import { getManilaDayKey } from "@/lib/utils"
