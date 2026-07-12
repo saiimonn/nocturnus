@@ -1,34 +1,49 @@
-import Link from "next/link";
+import Link from "next/link"
+import type { Event } from "@/lib/mock-data-user"
+import { getVenueByClubId } from "@/lib/mock-data-user"
 
-export default function EventCard({ event }) {
+interface EventCardProps {
+  event: Event
+  status: string
+}
+
+export default function EventCard({ event, status }: EventCardProps) {
+  const venue = getVenueByClubId(event.club_id)
+
   return (
     <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#1a1a1a] bg-[#111111] transition-transform duration-300 hover:-translate-y-0.5">
       <div className="relative aspect-video w-full overflow-hidden bg-black/50">
-        <img
-          src={event.image}
-          alt={event.name}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-
-        <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[8px] font-semibold uppercase tracking-widest text-white backdrop-blur-md">
-          {event.category}
-        </span>
+        {event.image_url && (
+          <img
+            src={event.image_url}
+            alt={event.title}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        )}
       </div>
 
       <div className="flex flex-1 flex-col p-4">
         <div className="flex items-start justify-between gap-4">
-          <h3 className="text-sm font-medium text-white md:text-base">{event.name}</h3>
+          <h3 className="text-sm font-medium text-white md:text-base">
+            {event.title}
+          </h3>
           <p
             className={`text-[11px] font-semibold uppercase tracking-wide ${
-            event.status === "TONIGHT" ? "text-yellow-500" : "text-pink-400"
-          }`}
+              status === "TONIGHT" ? "text-yellow-500" : "text-pink-400"
+            }`}
           >
-            {event.status}
+            {status}
           </p>
         </div>
 
-        <p className="mt-1.5 text-[11px] font-medium tracking-wide text-gray-500">{event.location}</p>
-        <p className="mt-1 text-[11px] text-gray-500">{event.date}</p>
+        {venue && (
+          <p className="mt-1.5 text-[11px] font-medium tracking-wide text-gray-500">
+            {venue.name} · {venue.address}
+          </p>
+        )}
+        <p className="mt-1 text-[11px] text-gray-500">
+          {new Date(event.event_date).toLocaleString()}
+        </p>
 
         <div className="mt-5">
           <Link href={`/currentEvents/${event.id}`}>
@@ -39,5 +54,5 @@ export default function EventCard({ event }) {
         </div>
       </div>
     </div>
-  );
+  )
 }
