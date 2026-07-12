@@ -1,6 +1,7 @@
 import Link from "next/link"
 import type { Event } from "@/lib/mock-data-user"
 import { getVenueByClubId } from "@/lib/mock-data-user"
+import { formatEventDate } from "@/lib/utils"
 
 interface EventCardProps {
   event: Event
@@ -42,7 +43,7 @@ export default function EventCard({ event, status }: EventCardProps) {
           </p>
         )}
         <p className="mt-1 text-[11px] text-gray-500">
-          {new Date(event.event_date).toLocaleString()}
+          {formatEventDate(event.event_date)}
         </p>
 
         <div className="mt-5">
