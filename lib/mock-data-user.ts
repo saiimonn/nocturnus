@@ -145,3 +145,81 @@ export const venues: Venue[] = [
 export function getVenueBySlug(slug: string) {
   return venues.find((venue) => venue.slug === slug)
 }
+
+export interface Event {
+  id: string
+  club_id: string
+  title: string
+  description?: string
+  image_url?: string
+  event_date: string
+  status: "draft" | "published" | "cancelled"
+  created_at: string
+  updated_at: string
+}
+
+export const events: Event[] = [
+  {
+    id: "e1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
+    club_id: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    title: "OASIS CEBU",
+    description: "Experience an immersive sonic journey. Expect high-voltage energy, unreleased edits, and a state-of-the-art visual production.",
+    image_url: "/image.png",
+    event_date: "2026-07-06T22:00:00Z",
+    status: "published",
+    created_at: "2026-07-01T10:00:00Z",
+    updated_at: "2026-07-01T10:00:00Z",
+  },
+  {
+    id: "f2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d",
+    club_id: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    title: "TRADEMARK FRIDAYS",
+    description: "The city's premier underground electronic music night. Resident DJs plus special guests.",
+    image_url: "/image4.jpg",
+    event_date: "2026-07-06T23:00:00Z",
+    status: "published",
+    created_at: "2026-07-01T10:00:00Z",
+    updated_at: "2026-07-01T10:00:00Z",
+  },
+  {
+    id: "a3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e",
+    club_id: "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+    title: "LIVE AT SENTRAL",
+    description: "Live band night featuring local Cebuano artists. Warm ambiance, curated whisky list.",
+    image_url: "/image.png",
+    event_date: "2026-07-06T21:00:00Z",
+    status: "published",
+    created_at: "2026-07-01T10:00:00Z",
+    updated_at: "2026-07-01T10:00:00Z",
+  },
+  {
+    id: "b4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f",
+    club_id: "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+    title: "ICON SATURDAY",
+    description: "Rotating guest DJs all night. Techno and house until sunrise.",
+    image_url: "/image.png",
+    event_date: "2026-07-07T22:00:00Z",
+    status: "published",
+    created_at: "2026-07-01T10:00:00Z",
+    updated_at: "2026-07-01T10:00:00Z",
+  },
+  {
+    id: "c5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f90",
+    club_id: "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+    title: "ICON LATE NIGHT",
+    description: "The after-hours extension. Deeper sounds for the dedicated crowd.",
+    image_url: "/image.png",
+    event_date: "2026-07-08T00:30:00Z",
+    status: "published",
+    created_at: "2026-07-01T10:00:00Z",
+    updated_at: "2026-07-01T10:00:00Z",
+  },
+]
+
+export function getEventById(id: string) {
+  return events.find((event) => event.id === id)
+}
+
+export function getVenueByClubId(clubId: string) {
+  return venues.find((venue) => venue.id === clubId)
+}
