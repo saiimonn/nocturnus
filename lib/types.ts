@@ -4,7 +4,7 @@ export interface User {
   email: string
   contact_number: string | null
   password_hash: string
-  role: "guest" | "owner" | "admin"
+  role: "owner" | "admin"
   created_at: string
   updated_at: string
 }
