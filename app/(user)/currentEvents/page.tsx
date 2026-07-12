@@ -1,7 +1,7 @@
 
 "use client";
 import DateRangeFilter from "@/components/dateRangeFilter";
-import EventCard from "@/components/userEventCard";
+import EventCard from "@/app/(user)/currentEvents/components/userEventCard";
 import { useState, useMemo } from "react";
 
 

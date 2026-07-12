@@ -31,7 +31,7 @@ export default function EventCard({ event }) {
         <p className="mt-1 text-[11px] text-gray-500">{event.date}</p>
 
         <div className="mt-5">
-          <Link href={`/events/${event.id}`}>
+          <Link href={`/currentEvents/${event.id}`}>
             <button className="flex w-full items-center justify-center rounded-full bg-[#1a1a1a] py-3 text-[9px] font-bold uppercase tracking-widest text-gray-200 transition-colors hover:bg-[#252525]">
               VIEW DETAILS
             </button>
