@@ -13,6 +13,7 @@ export interface Club {
   id: string
   owner_id: string
   name: string
+  slug: string
   description: string | null
   address: string
   operating_hours: OperatingHours | null
