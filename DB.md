@@ -68,6 +68,7 @@ The primary entity for a nightclub venue.
 | `cover_image_url`| `varchar` | NULLABLE | URL to cover photo in object storage. |
 | `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
 | `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
+| `slug` | `varchar` | NO NULL, UNIQUE | Identifier for club. |
 
 ### 4. `Club_Images`
 Additional gallery images for a specific club.
