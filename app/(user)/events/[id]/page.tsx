@@ -100,7 +100,7 @@ export default function EventDetailPage() {
               <h3 className="text-sm font-semibold uppercase tracking-wide text-white border-l-2 border-white pl-4">
                 THE EVENT
               </h3>
-              <p className="text-[15px] text-gray-400 leading-relaxed max-w-2xl">
+              <p className="text-[15px] text-gray-400 leading-relaxed">
                 {currentEvent.description ||
                   `Experience an immersive sonic journey at ${currentEvent.title}. Expect high-voltage energy and an unforgettable night.`}
               </p>
@@ -111,28 +111,31 @@ export default function EventDetailPage() {
                 RESERVE A TABLE
               </h3>
 
-              <div className="p-6 rounded-xl border border-zinc-800 bg-[#121212] flex flex-col justify-between max-w-2xl">
-                <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-bold text-sm tracking-wide uppercase text-zinc-100">
-                      BOOK AT {venue.name}
-                    </h4>
+              <div className="p-6 rounded-xl border border-zinc-800 bg-[#121212] flex flex-col justify-between">
+                <div className="flex flex-row justify-between">
+                  <div className="flex flex-col justify-between">
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-bold text-sm tracking-wide uppercase text-zinc-100">
+                        BOOK AT {venue.name}
+                      </h4>
+                    </div>
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest">
+                      {venue.address}
+                    </p>
+                  <div className="flex justify-between items-end mt-6">
+                    <p className="text-xs text-zinc-400">
+             1         Select a table from the floor plan to get started.
+                    </p>
                   </div>
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest">
-                    {venue.address}
-                  </p>
-                </div>
-
-                <div className="flex justify-between items-end mt-6">
-                  <p className="text-xs text-zinc-400">
-                    Select a table from the floor plan to get started.
-                  </p>
-                  <Button
-                    size="icon"
-                    className="bg-white hover:bg-zinc-200 text-black rounded-lg w-10 h-10"
-                  >
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
+                  </div>  
+                  <div className="flex items-center">
+                    <Button
+                      size="icon"
+                      className="bg-white hover:bg-zinc-200 text-black rounded-lg w-10 h-10"
+                    >
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
