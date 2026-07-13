@@ -179,7 +179,7 @@ export default function Home() {
               {venueCards.map((venue, cardIndex) => (
                 <div
                   key={`card-${cardIndex}-${venue.name}`}
-                  className="w-full shrink-0 px-2 md:w-1/2 xl:w-1/3 hover:scale-90 hover:skew-y-1 transition-all duration-300 cursor-pointer"
+                  className="w-full shrink-0 px-2 md:w-1/2 xl:w-1/3 hover:scale-90 transition-all duration-300 cursor-pointer"
                 >
                   <div className="relative group overflow-hidden rounded-md border border-[#0a0a0a] aspect-4/3 xl:aspect-video">
                     <Image

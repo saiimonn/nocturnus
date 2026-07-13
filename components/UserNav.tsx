@@ -39,7 +39,7 @@ export default function Nav() {
           <Link href="/browse" className="hover:text-[#a3a3a3] transition-colors">
             BROWSE
           </Link>
-          <Link href="/currentEvents" className="hover:text-[#a3a3a3] transition-colors">
+          <Link href="/events" className="hover:text-[#a3a3a3] transition-colors">
             EVENTS
           </Link>
         </nav>

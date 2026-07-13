@@ -6,6 +6,7 @@ import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Calendar, MapPin, ArrowRight, Bookmark } from "lucide-react"
 import { getEventById, getVenueByClubId } from "@/lib/mock-data-user"
+import { formatEventDate } from "@/lib/utils"
 
 export default function EventDetailPage() {
   const params = useParams()
@@ -77,7 +78,7 @@ export default function EventDetailPage() {
                   Schedule
                 </p>
                 <p className="text-sm font-semibold text-zinc-200">
-                  {new Date(currentEvent.event_date).toLocaleString()}
+                  {formatEventDate(currentEvent.event_date)}
                 </p>
               </div>
             </div>

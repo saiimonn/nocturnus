@@ -1,14 +1,15 @@
 'use client'
 
 import DateRangeFilter from "@/components/dateRangeFilter"
-import EventCard from "@/app/(user)/currentEvents/components/userEventCard"
+import EventCard from "@/app/(user)/events/components/userEventCard"
 import { useState, useMemo } from "react"
 import { events, getVenueByClubId } from "@/lib/mock-data-user"
+import { getManilaDayKey } from "@/lib/utils"
 
 function getStatus(dateISO: string) {
-  const eventDate = new Date(dateISO)
-  const now = new Date()
-  const isToday = eventDate.toDateString() === now.toDateString()
+  const eventDayKey = getManilaDayKey(dateISO)
+  const todayDayKey = getManilaDayKey(new Date())
+  const isToday = eventDayKey === todayDayKey
   return isToday ? "TONIGHT" : "UPCOMING"
 }
 
@@ -71,7 +72,7 @@ export default function EventListing() {
         />
       </div>
 
-      <div className="px-8 pb-16 grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6">
+      <div className="px-8 pb-16 grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6 mt-8">
         {filteredEvents.map((event) => (
           <EventCard
             key={event.id}
