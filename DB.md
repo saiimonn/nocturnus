@@ -40,6 +40,7 @@ Core identity table for platform users. Only `owner` and `admin` roles have acco
 | `contact_number`| `varchar` | NULLABLE | Mobile / contact number. |
 | `password_hash` | `varchar` | NO NULL | Bcrypt-hashed password. |
 | `role` | `varchar` | NO NULL | Accepts: `owner` or `admin`. |
+| `status` | `varchar` | NO NULL, DEFAULT `active` | Accepts: `active`, `suspended`. A superadmin sets `suspended` to lock out a compromised or fraudulent account without deleting it. |
 | `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
 | `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
 
@@ -52,6 +53,7 @@ Handles the one-time token flow for verifying nightclub owners. Tokens are gener
 | `token_hash` | `varchar` | NO NULL | Hashed one-time token. |
 | `expires_at` | `timestamp` | NO NULL | Token expiry datetime (UTC). |
 | `used` | `boolean` | NO NULL | TRUE once token is consumed. |
+| `revoked` | `boolean` | NO NULL, DEFAULT `false` | TRUE if a superadmin manually invalidated the token before it was used or expired (e.g. it leaked before reaching the owner). A revoked token must be rejected at redemption even if `expires_at` is still in the future. |
 | `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
 
 ### 3. `Clubs`
@@ -69,6 +71,7 @@ The primary entity for a nightclub venue.
 | `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
 | `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
 | `slug` | `varchar` | NO NULL, UNIQUE | Identifier for club. |
+| `status` | `varchar` | NO NULL, DEFAULT `active` | Accepts: `active`, `inactive`. A superadmin sets `inactive` to take a venue offline (e.g. fraud investigation) without deleting its data. |
 
 ### 4. `Club_Images`
 Additional gallery images for a specific club.

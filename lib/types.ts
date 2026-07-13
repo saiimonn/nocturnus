@@ -5,6 +5,7 @@ export interface User {
   contact_number: string | null
   password_hash: string
   role: "owner" | "admin"
+  status: "active" | "suspended"
   created_at: string
   updated_at: string
 }
@@ -20,6 +21,7 @@ export interface Club {
   cover_image_url: string | null
   created_at: string
   updated_at: string
+  status: "active" | "inactive"
 }
 
 export interface OperatingHours {
