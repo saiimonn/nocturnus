@@ -93,6 +93,7 @@ Distinct physical spaces within a club (e.g., Ground Floor, VIP Mezzanine).
 | `club_id` | `uuid` | FK, NO NULL | References `Clubs.id`. |
 | `name` | `varchar` | NO NULL | Floor plan label (e.g., "Ground Floor"). |
 | `image_url` | `varchar` | NO NULL | URL to the 2D floor plan canvas image. |
+| `labels` | `jsonb` | NULLABLE | Array of static annotations `[{text, x, y}]` for area labels (e.g., "STAGE", "BAR"). Coordinates use 0.0–1.0 relative to the canvas, same system as `Club_Tables.pos_x`/`pos_y`. |
 | `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
 | `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
 

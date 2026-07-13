@@ -1,6 +1,7 @@
 import Image from "next/image"
 import { notFound } from "next/navigation"
 import { getVenueBySlug, venues } from "@/lib/mock-data-user"
+import VenueBooking from "./components/venueBooking"
 
 export function generateStaticParams() {
   return venues.map((venue) => ({ slug: venue.slug }))
@@ -99,6 +100,15 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
             </div>
           </div>
         )}
+      </div>
+
+      <div className="px-8 pb-16 md:px-16">
+        <VenueBooking
+          venueName={venue.name}
+          tables={venue.tables}
+          floorplanLabels={venue.floorplan_labels}
+          floorplanImageUrl={venue.floorplan_image_url}
+        />
       </div>
     </div>
   )

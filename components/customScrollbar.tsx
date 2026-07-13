@@ -85,7 +85,7 @@ export default function CustomScrollbar() {
     showThumb()
   }, [showThumb])
 
-  const onTrackClick = useCallback((e: React.PointerEvent) => {
+  const onTrackClick = useCallback((e: React.MouseEvent | React.PointerEvent) => {
     const track = e.currentTarget as HTMLElement
     const rect = track.getBoundingClientRect()
     const clickY = e.clientY - rect.top
