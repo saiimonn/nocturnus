@@ -61,6 +61,11 @@ If you add a screen, match the group you're in. Don't "fix" the owner dashboard 
 
 Owner routes (from `components/Sidebar.tsx`): `/dashboard`, `/club/details`, `/club/layout`, `/booking/requests`, `/booking/history`, `/events`.
 
+### Current events date rendering
+
+- User event cards and the current event detail schedule now format `event_date` via shared helpers in `lib/utils.ts` (`formatEventDate`, `getManilaDayKey`) using `Asia/Manila` timezone.
+- This replaced direct `toLocaleString()` calls in current-events screens to avoid server/client hydration mismatches from environment locale differences.
+
 ### Data layer: hardcoded, and not centralized
 
 There are **two competing sources of truth**, and new work keeps adding to the wrong one:
