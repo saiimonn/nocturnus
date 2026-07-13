@@ -56,9 +56,11 @@ export default function UserLayout({
   return (
     <div className="relative min-h-screen flex-col overflow-hidden bg-black text-white">
       <LiquidBackground />
-      <Nav />
-      <div className="relative z-10 flex flex-1 flex-col">{children}</div>
-      <Footer />
+      <div className="relative z-10 flex min-h-screen flex-col">
+        <Nav />
+        <div className="flex flex-1 flex-col">{children}</div>
+        <Footer />
+      </div>
     </div>
   );
 }

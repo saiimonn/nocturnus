@@ -20,7 +20,7 @@ export default function BrowsePage() {
   }, [search])
 
   return (
-    <div className="min-h-screen w-full bg-black px-8 py-12 text-white md:px-16">
+    <div className="min-h-screen w-full  px-8 py-12 text-white md:px-16">
       {/* Hero */}
       <div className="max-w-2xl">
         <h1 className="text-4xl font-bold uppercase leading-[1.05] tracking-tight md:text-5xl">
