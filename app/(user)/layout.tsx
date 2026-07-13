@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import Nav from "@/components/UserNav";
 import Footer from "@/components/footer";
 import Lenis from 'lenis';
@@ -11,6 +12,9 @@ export default function UserLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const lenisRef = useRef<Lenis | null>(null);
+
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.2,
@@ -21,6 +25,8 @@ export default function UserLayout({
       wheelMultiplier: 1,
       touchMultiplier: 2,
     });
+
+    lenisRef.current = lenis;
 
     let rafId = 0;
     const raf = (time: number): void => {
@@ -33,8 +39,18 @@ export default function UserLayout({
     return () => {
       cancelAnimationFrame(rafId);
       lenis.destroy();
+      lenisRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const lenis = lenisRef.current;
+    if (!lenis) return;
+    lenis.scrollTo(0, { immediate: true });
+    requestAnimationFrame(() => {
+      lenis.resize();
+    });
+  }, [pathname]);
 
   return (
     <div className="flex min-h-screen flex-col text-white bg-linear-to-b from-black to-[#080808]">
