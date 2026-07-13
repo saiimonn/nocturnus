@@ -19,6 +19,7 @@ export const club: Club = {
   cover_image_url: null,
   created_at: "2025-06-15T10:00:00Z",
   updated_at: "2026-07-10T08:30:00Z",
+  status: "active",
 }
 
 export const clubImages: ClubImage[] = [
