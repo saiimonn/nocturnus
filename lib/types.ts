@@ -38,11 +38,18 @@ export interface ClubImage {
   created_at: string
 }
 
+export interface FloorPlanLabel {
+  text: string
+  x: number
+  y: number
+}
+
 export interface FloorPlan {
   id: string
   club_id: string
   name: string
   image_url: string
+  labels: FloorPlanLabel[] | null
   created_at: string
   updated_at: string
 }

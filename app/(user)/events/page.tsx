@@ -16,6 +16,7 @@ function getStatus(dateISO: string) {
 export default function EventListing() {
   const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" })
   const [search, setSearch] = useState("")
+  const [activeEventId, setActiveEventId] = useState<string | null>(null)
 
   const publishedEvents = useMemo(
     () => events.filter((e) => e.status === "published"),
@@ -45,7 +46,7 @@ export default function EventListing() {
   }, [publishedEvents, search, dateRange])
 
   return (
-    <div className="min-h-screen w-full bg-black px-8 py-12 text-white md:px-16">
+    <div className="min-h-screen w-full  px-8 py-12 text-white md:px-16">
       <div className="max-w-2xl">
         <h1 className="text-4xl font-bold uppercase leading-[1.05] tracking-tight md:text-5xl">
           Find Your Night
@@ -74,11 +75,21 @@ export default function EventListing() {
 
       <div className="px-8 pb-16 grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-6 mt-8">
         {filteredEvents.map((event) => (
-          <EventCard
+          <div
             key={event.id}
-            event={event}
-            status={getStatus(event.event_date)}
-          />
+            onMouseEnter={() => setActiveEventId(event.id)}
+            onMouseLeave={() => setActiveEventId(null)}
+            className={`transition-opacity duration-200 ${
+              activeEventId !== null && activeEventId !== event.id
+                ? "opacity-40"
+                : "opacity-100"
+            }`}
+          >
+            <EventCard
+              event={event}
+              status={getStatus(event.event_date)}
+            />
+          </div>
         ))}
 
         {filteredEvents.length === 0 && (
