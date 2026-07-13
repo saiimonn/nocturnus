@@ -9,6 +9,7 @@ export interface Database {
           contact_number: string | null
           password_hash: string
           role: "owner" | "admin"
+          status: "active" | "suspended"
           created_at: string
           updated_at: string
         }
@@ -19,6 +20,7 @@ export interface Database {
           contact_number?: string | null
           password_hash: string
           role: "owner" | "admin"
+          status?: "active" | "suspended"
           created_at?: string
           updated_at?: string
         }
@@ -29,9 +31,11 @@ export interface Database {
           contact_number?: string | null
           password_hash?: string
           role?: "owner" | "admin"
+          status?: "active" | "suspended"
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       owner_verification_tokens: {
         Row: {
@@ -39,6 +43,7 @@ export interface Database {
           token_hash: string
           expires_at: string
           used: boolean
+          revoked: boolean
           created_at: string
         }
         Insert: {
@@ -46,6 +51,7 @@ export interface Database {
           token_hash: string
           expires_at: string
           used?: boolean
+          revoked?: boolean
           created_at?: string
         }
         Update: {
@@ -53,8 +59,10 @@ export interface Database {
           token_hash?: string
           expires_at?: string
           used?: boolean
+          revoked?: boolean
           created_at?: string
         }
+        Relationships: []
       }
       clubs: {
         Row: {
@@ -66,6 +74,7 @@ export interface Database {
           address: string
           operating_hours: { day: string; open: string; close: string }[] | null
           cover_image_url: string | null
+          status: "active" | "inactive"
           created_at: string
           updated_at: string
         }
@@ -78,6 +87,7 @@ export interface Database {
           address: string
           operating_hours?: { day: string; open: string; close: string }[] | null
           cover_image_url?: string | null
+          status?: "active" | "inactive"
           created_at?: string
           updated_at?: string
         }
@@ -90,9 +100,11 @@ export interface Database {
           address?: string
           operating_hours?: { day: string; open: string; close: string }[] | null
           cover_image_url?: string | null
+          status?: "active" | "inactive"
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       club_images: {
         Row: {
@@ -116,6 +128,7 @@ export interface Database {
           caption?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       floor_plans: {
         Row: {
@@ -123,6 +136,7 @@ export interface Database {
           club_id: string
           name: string
           image_url: string
+          labels: { text: string; x: number; y: number }[] | null
           created_at: string
           updated_at: string
         }
@@ -131,6 +145,7 @@ export interface Database {
           club_id: string
           name: string
           image_url: string
+          labels?: { text: string; x: number; y: number }[] | null
           created_at?: string
           updated_at?: string
         }
@@ -139,9 +154,11 @@ export interface Database {
           club_id?: string
           name?: string
           image_url?: string
+          labels?: { text: string; x: number; y: number }[] | null
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       club_tables: {
         Row: {
@@ -186,6 +203,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       events: {
         Row: {
@@ -221,6 +239,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       discount_codes: {
         Row: {
@@ -262,6 +281,7 @@ export interface Database {
           is_active?: boolean
           min_order_value?: number
         }
+        Relationships: []
       }
       reservations: {
         Row: {
@@ -309,6 +329,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
     }
     Views: Record<string, never>
