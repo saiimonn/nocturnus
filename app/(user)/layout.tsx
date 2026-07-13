@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import Nav from "@/components/UserNav";
 import Footer from "@/components/footer";
+import LiquidBackground from '@/components/liquidBackground';
 import Lenis from 'lenis';
 
 
@@ -53,9 +54,10 @@ export default function UserLayout({
   }, [pathname]);
 
   return (
-    <div className="flex min-h-screen flex-col text-white bg-linear-to-b from-black to-[#080808]">
+    <div className="relative min-h-screen flex-col overflow-hidden bg-black text-white">
+      <LiquidBackground />
       <Nav />
-      <div className="flex-1 flex flex-col">{children}</div>
+      <div className="relative z-10 flex flex-1 flex-col">{children}</div>
       <Footer />
     </div>
   );
