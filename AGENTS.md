@@ -24,7 +24,15 @@ A pull request that changes behavior but leaves this file stale is incomplete.
 
 A PWA for digitizing nightclub table reservations and VIP bottle service.
 
-**Current state: front-end prototype.** Every screen renders from hardcoded data. There is no database, no auth, no network layer — no Supabase client, no `route.ts` handlers, no server actions, and not a single `fetch()` in `app/`, `components/`, or `lib/`. Treat `DB.md` and the "Target design" section below as the spec being built toward, not as a description of code that exists.
+**Current state: front-end prototype with a fresh REST API layer.** Every *screen* still renders from hardcoded data — the frontend does not yet call the API (no `fetch()` in `app/`/`components/` wiring pages to it). What now exists on the server side:
+
+- A typed Supabase client (`lib/supabase.ts`, anon key) and a full `app/api/**/route.ts` surface backed by domain handlers in `lib/api/` (see "API layer" below).
+- **Public/guest routes are real** and query Supabase directly (club browse/detail/images/floor-plans/tables/events, guest reservation creation, guest reservation lookup, QR check-in, discount-code validation).
+- **Owner/admin routes are scaffolded but return `501 not_implemented`** — there is still no auth. `lib/api/shared/auth.ts` (`requireOwner`, `requireClubOwner`) throws until a Supabase Auth session layer is built.
+
+Two schema-drift caveats, both because `DB.md` is ahead of what's deployed:
+- `lib/db.ts` has been synced to `DB.md` (added `status` on `clubs`/`users`, `revoked` on `owner_verification_tokens`, `labels` on `floor_plans`).
+- **The live Supabase database has NOT been migrated** for those columns yet. Reads that filter `clubs.status = 'active'` currently return `500 column clubs.status does not exist` until a migration runs. `DB.md` remains the spec.
 
 ## Stack
 - **Framework:** Next.js 16.2.4 (App Router) + React 19.2.4 + TypeScript (strict)
@@ -75,6 +83,23 @@ There are **two competing sources of truth**, and new work keeps adding to the w
 
 Prefer extending `data/placeholder.ts` over adding another page-local array. When the backend lands, module #1 is the seam that gets replaced; page-local arrays are all separate migrations.
 
+### API layer (`app/api/**` + `lib/api/**`)
+
+REST routes derived from `DB.md`. **`app/api/**/route.ts` files are one-line re-exports** — all logic lives in domain handlers under `lib/api/`, so a `route.ts` never contains a handler body:
+
+```ts
+export { listClubs as GET, createClub as POST } from "@/lib/api/clubs/api"
+```
+
+- `lib/api/{clubs,events,reservations,discount-codes,auth}/api.ts` — handlers grouped by domain. Every handler is wrapped in `handle()` from `lib/api/shared/errors.ts`, which catches `ApiError` (typed status/code) and unexpected errors into a consistent `{ error, message }` JSON body. Helpers: `fromDb` (throws 404 on a null single-row lookup, 500 on a Postgrest error), `readJson`, `requireFields`, and the `badRequest`/`notFound`/`conflict`/`notImplemented` constructors.
+- `lib/api/shared/auth.ts` — `requireOwner` / `requireClubOwner` gate owner routes; both `throw notImplemented()` today.
+
+**Audience split in the URL tree** — public reads use the SEO slug, owner writes use the club UUID. Next.js forbids two differently-named dynamic segments at the same position, so **owner management lives under `/api/owner/clubs/[clubId]/...`**, not `/api/clubs/[clubId]/...`:
+- Public (real): `GET /api/clubs`, `/api/clubs/[slug]`, `.../[slug]/images`, `.../[slug]/floor-plans`, `.../[slug]/floor-plans/[floorPlanId]/tables`, `.../[slug]/events`, `GET /api/events/[eventId]`, `POST /api/discount-codes/validate`, `POST /api/reservations`, `GET /api/reservations/[id]` (guest email in `X-Guest-Email` header, kept out of the URL), `POST /api/reservations/checkin`.
+- Owner (501 stub): `POST /api/clubs`, `PATCH /api/reservations/[id]`, all of `/api/owner/clubs/[clubId]/**` (club/images/floor-plans/tables/events/discount-codes/reservations), `POST /api/auth/verification/redeem`.
+
+**Supabase-js typing gotcha:** explicit column-list selects (`.select("id, status")`) resolve to `never` for property access without fully generated types — use `.select("*")` when you read fields off the result, or destructure `{ data, error }` and narrow with a null check (see `checkinReservation`). Narrowed selects are fine for response-only payloads. Every table in `lib/db.ts` must carry `Relationships: []` or `.insert()`/`.update()` args resolve to `never`.
+
 ### Floorplan editor (`app/(owner)/club/layout/floorplanCanvas.tsx`)
 
 The single most complex file in the repo (~500 lines). A Konva `<Stage>` with `<Group>`-wrapped tables supporting drag, `<Transformer>` resize, add/edit/delete via shadcn `<Dialog>`.
@@ -118,6 +143,6 @@ Read `DB.md` for the full schema (UUID PKs, UTC timestamps, `club_id` denormaliz
 - **Discount codes** are per-club; applied at checkout when the table's `minimum_spend` meets the code's `min_order_value`.
 - **Backend** is intended to be Supabase (PostgreSQL + PostGIS for distance filtering, Realtime for live floorplan status) with Supabase Auth for owners/managers only.
 
-None of `/admin/scanner`, QR generation, discount codes, distance filtering, or auth exists yet.
+Progress against this flow (see "API layer"): guest reservation creation (`POST /api/reservations` → `pending`), guest lookup, QR check-in (`POST /api/reservations/checkin` → `checked_in`), and discount-code validation now exist as **API endpoints**. Still missing: the owner accept/decline step that generates the `qr_code_token` (stubbed 501, pending auth), the `/admin/scanner` UI (only the check-in API exists), owner auth, distance filtering, and any frontend wiring — every screen still reads hardcoded data.
 
 As each of these ships, delete it from this section and describe the real implementation in the body above.
