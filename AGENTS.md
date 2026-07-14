@@ -63,10 +63,20 @@ export { listClubs as GET, createClub as POST } from "@/lib/api/clubs/api"
 ```
 
 Shared plumbing is in `lib/api/shared/`:
-- `errors.ts` — the `ApiError` class + factories (`badRequest`, `notFound`, `conflict`, `notImplemented`, …), the `handle()` wrapper (catches thrown `ApiError`s and serializes them to JSON with the right status), `fromDb()` (unwraps a Supabase `{ data, error }`, throwing 500 on error / 404 on null), `readJson()`, `requireFields()`, and `RouteContext<T>` (whose `params` is a `Promise`, per Next 16). Handlers **throw** to signal failure — never hand-build error responses.
-- `auth.ts` — `requireSuperadmin()`, currently a `notImplemented` stub. Every mutation guards on it.
+- `errors.ts` — the `ApiError` class + factories (`badRequest`, `unauthorized`, `forbidden`, `notFound`, `conflict`, `notImplemented`, …), the `handle()` wrapper (catches thrown `ApiError`s and serializes them to JSON with the right status), `fromDb()` (unwraps a Supabase `{ data, error }`, throwing 500 on error / 404 on null), `readJson()`, `requireFields()`, and `RouteContext<T>` (whose `params` is a `Promise`, per Next 16). Handlers **throw** to signal failure — never hand-build error responses.
+- `auth.ts` — the owner guards, now **implemented** (see Authentication below): `requireOwner()` reads/verifies the session cookie and returns `{ userId, role: "owner" }` or throws `unauthorized`; `requireClubOwner(clubId)` additionally loads the club (service-role client) and throws `forbidden` unless `club.owner_id` matches. Every mutation guards on one of these.
 
-Handler modules: `clubs`, `reservations`, `users`, `onboarding` (verification tokens), `finance`. **Cross-tenant reads are implemented** against Supabase; selects deliberately omit `password_hash` (users) and `token_hash` (tokens). **Mutations are stubbed** — they call `requireSuperadmin()` then throw `notImplemented`, awaiting the auth + business logic. Finance is fully stubbed because no payments/PayMongo table exists in `DB.md` yet (the numbers live only as `mock-data.ts` aggregates). Note the DB-typed client narrows enum columns to string-literal unions, so `.eq("status", value)` on a filter needs a cast to that union.
+### Authentication
+
+Auth is **custom credentials**, not Supabase Auth: `users.password_hash` is a bcrypt hash (`bcryptjs`, now a runtime dependency). **Only `role === "owner"` can log in** — `admin`/non-owner and suspended accounts are rejected.
+
+- **Session:** a signed JWT (`jose`, HS256, 7-day expiry) in an `HttpOnly` cookie named `otus_session`, keyed by `AUTH_SECRET` (required env var, in `.env.local`). The cookie contract lives in **`lib/api/auth/session.ts`** (`createSession`, `verifySession`, `SESSION_COOKIE`, `sessionCookieOptions`) — nothing else touches JWTs directly.
+- **Endpoints** (`lib/api/auth/api.ts`, thin routes under `app/api/auth/`): `POST /api/auth/login` (`readJson` → verify email+password → set cookie → return the safe user fields, never `password_hash`; generic 401 for missing user / bad password / non-owner, 403 for suspended) and `POST /api/auth/logout` (clears the cookie). `redeemVerificationToken` (register) is still a `notImplemented` stub.
+- **Reads use the service-role client** (`lib/supabase-admin.ts`, `supabaseAdmin`) because RLS hides the `users` table from the anon key and `password_hash` must never be exposed through it. Import it **server-side only**.
+- **Route protection:** `proxy.ts` at the repo root (Next 16 renamed `middleware` → `proxy`; it defaults to the Node.js runtime) verifies the cookie and redirects anonymous users to `/auth/login`. Its `matcher` covers the `(owner)` routes — `/dashboard`, `/reservations/*`, `/discounts/*`, `/owner-events/*`, and the owner-only `/club/details` + `/club/layout` (NOT `/club/[slug]`, which is a public `(user)` page).
+- **Login UI:** `app/auth/login/page.tsx` POSTs to `/api/auth/login` and on success `router.push("/dashboard")`.
+
+Handler modules: `clubs`, `reservations`, `users`, `onboarding` (verification tokens), `finance`, `auth`. **Cross-tenant reads are implemented** against Supabase; selects deliberately omit `password_hash` (users) and `token_hash` (tokens). **Owner login/logout are implemented** (see Authentication above). Other **mutations are still stubbed** — they call `requireOwner()`/`requireClubOwner()` (now real guards) then throw `notImplemented`, awaiting the business logic. Finance is fully stubbed because no payments/PayMongo table exists in `DB.md` yet (the numbers live only as `mock-data.ts` aggregates). Note the DB-typed client narrows enum columns to string-literal unions, so `.eq("status", value)` on a filter needs a cast to that union.
 
 ## Domain Context
 
