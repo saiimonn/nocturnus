@@ -51,6 +51,8 @@ The typed schema — the source of truth for every row shape — lives in **`lib
 
 `npm run seed` (`scripts/seed.ts`, invoked via `tsx`) **wipes then repopulates** every Supabase table with constraint-valid faker data. It builds its **own** service-role Supabase client (distinct from the anon `lib/supabase.ts` singleton) to bypass RLS, so it needs `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`; it fails fast if either is missing and prints the target host before wiping. Deletes run in FK-reverse order and inserts in FK-safe order (`users → clubs → images/floor_plans/events/discount_codes → club_tables → reservations`; `owner_verification_tokens` is standalone), keeping the denormalized `club_id` consistent. Adjust generated data shapes in `scripts/seed/factories.ts` and volume via the `COUNTS` object at the top of `scripts/seed.ts`. Verification-token plaintexts are printed to the console for out-of-band redemption. This is a **dev-only** tool — never point it at production.
 
+Every seeded user shares one bcrypt-hashed password (`bcryptjs`, hashing the `SEED_PASSWORD` constant in `scripts/seed.ts`), so any of them can log in. Two fixed, memorable accounts lead the set and are forced `active`: **`owner@otus.dev`** (role `owner`, owns clubs) and **`admin@otus.dev`** (role `admin`). Default password is `password123` — the seed run prints the accounts and password at the end.
+
 ### API layer
 
 REST routes under `app/api/` follow a **thin-route** convention: each `route.ts` is a one-line re-export that maps HTTP verbs to named handlers, and all logic lives in `lib/api/<feature>/api.ts`. Example:

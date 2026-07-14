@@ -4,10 +4,6 @@ import type { Database } from "../../lib/db"
 
 type Tables = Database["public"]["Tables"]
 
-/** Placeholder bcrypt-format hash. Auth is not wired; the column only needs a valid shape. */
-export const SEED_PASSWORD_HASH =
-  "$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"
-
 function now(): string {
   return new Date().toISOString()
 }
@@ -24,7 +20,11 @@ function operatingHours(): { day: string; open: string; close: string }[] {
   }))
 }
 
-export function makeUser(role: "owner" | "admin"): Tables["users"]["Insert"] {
+export function makeUser(
+  role: "owner" | "admin",
+  passwordHash: string,
+  overrides: Partial<Tables["users"]["Insert"]> = {},
+): Tables["users"]["Insert"] {
   const ts = now()
   return {
     id: randomUUID(),
@@ -32,7 +32,7 @@ export function makeUser(role: "owner" | "admin"): Tables["users"]["Insert"] {
     email: `${faker.internet.username().toLowerCase()}.${shortId()}@example.com`,
     contact_number:
       faker.helpers.maybe(() => faker.phone.number(), { probability: 0.8 }) ?? null,
-    password_hash: SEED_PASSWORD_HASH,
+    password_hash: passwordHash,
     role,
     status: faker.helpers.weightedArrayElement([
       { value: "active", weight: 9 },
@@ -40,6 +40,7 @@ export function makeUser(role: "owner" | "admin"): Tables["users"]["Insert"] {
     ]),
     created_at: ts,
     updated_at: ts,
+    ...overrides,
   }
 }
 

@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js"
 import { faker } from "@faker-js/faker"
+import bcrypt from "bcryptjs"
 import type { Database } from "../lib/db"
 import {
   makeUser,
@@ -25,6 +26,13 @@ const COUNTS = {
   reservationsPerClub: 15,
   verificationTokens: 5,
 }
+
+// Known login credentials. Every seeded user shares SEED_PASSWORD (bcrypt-hashed
+// per DB.md), and these two fixed accounts have stable, memorable emails so you
+// always know one owner and one admin to log in with. Change to taste.
+const SEED_PASSWORD = "password123"
+const FIXED_OWNER = { email: "owner@otus.dev", full_name: "Demo Owner" }
+const FIXED_ADMIN = { email: "admin@otus.dev", full_name: "Demo Admin" }
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -86,8 +94,23 @@ async function main(): Promise<void> {
   console.log("Wiping existing data (FK-reverse order)...")
   await wipe()
 
-  const owners = Array.from({ length: COUNTS.owners }, () => makeUser("owner"))
-  const admins = Array.from({ length: COUNTS.admins }, () => makeUser("admin"))
+  // One bcrypt hash of SEED_PASSWORD, shared by every seeded user so any of them
+  // can log in. The two fixed accounts lead their arrays (forced active, never
+  // suspended), and the fixed owner is owners[0] so it owns clubs below.
+  const passwordHash = bcrypt.hashSync(SEED_PASSWORD, 10)
+
+  const owners = [
+    makeUser("owner", passwordHash, { ...FIXED_OWNER, status: "active" }),
+    ...Array.from({ length: COUNTS.owners - 1 }, () =>
+      makeUser("owner", passwordHash),
+    ),
+  ]
+  const admins = [
+    makeUser("admin", passwordHash, { ...FIXED_ADMIN, status: "active" }),
+    ...Array.from({ length: COUNTS.admins - 1 }, () =>
+      makeUser("admin", passwordHash),
+    ),
+  ]
   const users = [...owners, ...admins]
 
   const clubs: ReturnType<typeof makeClub>[] = []
@@ -157,6 +180,11 @@ async function main(): Promise<void> {
   )
 
   console.log("\n✅ Seed complete.")
+  console.log(`\nLogin accounts — password for ALL seeded users: ${SEED_PASSWORD}`)
+  console.log(
+    `  owner → ${FIXED_OWNER.email}  (role: owner, owns ${COUNTS.clubsPerOwner} clubs)`,
+  )
+  console.log(`  admin → ${FIXED_ADMIN.email}  (role: admin)`)
   console.log("\nVerification tokens (plaintext — redeem out-of-band):")
   for (const t of tokens) console.log(`  ${t.plaintext}`)
 }
