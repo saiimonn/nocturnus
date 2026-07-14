@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Nav from "@/components/UserNav";
 import Footer from "@/components/footer";
@@ -14,21 +14,26 @@ export default function UserLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const lenisRef = useRef<Lenis | null>(null);
-  const rafRef = useRef(0);
 
   useEffect(() => {
-    if (lenisRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      lenisRef.current.destroy();
-      lenisRef.current = null;
-    }
+    // All handles are scoped to this effect invocation so cleanup can always
+    // cancel them. The previous version deferred init() with an untracked
+    // double rAF, so a fast unmount (nav to owner, Strict Mode, quick route
+    // change) ran cleanup while the instance was still null — nothing was
+    // destroyed — then the pending init() fired after unmount, leaking an
+    // orphaned Lenis (live raf loop + wheel listener) that fought for scroll.
+    let cancelled = false;
+    let deferId = 0;
+    let loopId = 0;
+    let lenis: Lenis | null = null;
 
     document.documentElement.style.overflow = '';
     document.body.style.overflow = '';
 
     const init = () => {
-      const lenis = new Lenis({
+      if (cancelled) return;
+
+      lenis = new Lenis({
         duration: 1.2,
         easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
         orientation: 'vertical',
@@ -38,29 +43,25 @@ export default function UserLayout({
         touchMultiplier: 2,
       });
 
-      lenisRef.current = lenis;
-
       const raf = (time: number): void => {
-        lenis.raf(time);
-        rafRef.current = requestAnimationFrame(raf);
+        lenis?.raf(time);
+        loopId = requestAnimationFrame(raf);
       };
 
-      rafRef.current = requestAnimationFrame(raf);
+      loopId = requestAnimationFrame(raf);
       lenis.scrollTo(0, { immediate: true });
     };
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        init();
-      });
+    deferId = requestAnimationFrame(() => {
+      deferId = requestAnimationFrame(init);
     });
 
     return () => {
-      cancelAnimationFrame(rafRef.current);
-      if (lenisRef.current) {
-        lenisRef.current.destroy();
-        lenisRef.current = null;
-      }
+      cancelled = true;
+      cancelAnimationFrame(deferId);
+      cancelAnimationFrame(loopId);
+      lenis?.destroy();
+      lenis = null;
       document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
     };
