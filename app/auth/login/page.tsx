@@ -1,14 +1,43 @@
 'use client';
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (loading) return;
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setError(data?.message ?? "Unable to sign in. Please try again.");
+        return;
+      }
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className = "relative min-h-screen w-full overflow-hidden bg-[#0a0a0a] text-white">
       <div className = "relative z-10 flex flex-col p-8 md:px-16">
@@ -28,7 +57,7 @@ export default function LoginPage() {
               Cebu&apos;s late-night network.
             </p>
 
-            <div className = "mt-10 space-y-5">
+            <form onSubmit={handleSubmit} className = "mt-10 space-y-5">
               <div>
                 <label className = "text-xs uppercase tracking-widest text-gray-500">
                   Email Address
@@ -70,8 +99,18 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <button className = "mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white text-sm font-medium text-black transition-colors hover:bg-gray-100">
-                Login
+              {error && (
+                <p className = "text-sm text-red-400" role="alert">
+                  {error}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className = "mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white text-sm font-medium text-black transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? "Signing in…" : "Login"}
                 <ArrowRight className = "size-4" />
               </button>
 
@@ -81,7 +120,7 @@ export default function LoginPage() {
                   Sign up
                 </Link>
               </p>
-            </div>
+            </form>
           </div>
         </div>
       </div>
