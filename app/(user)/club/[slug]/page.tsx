@@ -2,6 +2,7 @@ import Image from "next/image"
 import { notFound } from "next/navigation"
 import { getVenueBySlug, venues } from "@/lib/mock-data-user"
 import VenueBooking from "./components/venueBooking"
+import { GoogleAiChat } from "@/components/googleAiChat"
 
 export function generateStaticParams() {
   return venues.map((venue) => ({ slug: venue.slug }))
@@ -22,6 +23,21 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
   return (
     <div className="min-h-screen w-full bg-black text-white -mt-20 z-0">
       {/* Hero */}
+
+
+
+      
+       <section className="w-full max-w-6xl mb-24">
+          <GoogleAiChat
+            venue={{
+              name: venue.name,
+              description: venue.description ?? null,
+              floorplanImageUrl: venue.floorplan_image_url ?? null,
+              address: venue.address ?? null,
+            }}
+          />
+        </section>
+
       <div className="relative h-105 w-full overflow-hidden md:h-130">
         {venue.cover_image_url && (
           <Image
@@ -102,6 +118,8 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
         )}
       </div>
 
+
+        
       <div className="px-8 pb-16 md:px-16">
         <VenueBooking
           venueName={venue.name}

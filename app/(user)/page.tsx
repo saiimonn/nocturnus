@@ -8,7 +8,7 @@ import SearchSuggestionsCard from "@/components/searchSuggestionsCard";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, MapIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-
+import { GoogleAiChat } from "@/components/googleAiChat";
 
 export default function Home() {
   const router = useRouter();
@@ -299,6 +299,7 @@ export default function Home() {
 
         <Separator className="max-w-6xl mx-auto mb-24 bg-[#1a1a1a]" />
 
+       
         <section className = "w-full max-w-5xl mb-24 relative">
           <h2 className="text-2xl md:text-3xl font-medium mb-16 text-left uppercase">how to book</h2>
 
