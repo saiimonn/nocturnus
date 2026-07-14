@@ -8,6 +8,7 @@ import { Calendar, MapPin, ArrowRight, Bookmark } from "lucide-react"
 import { getEventById, getVenueByClubId } from "@/lib/mock-data-user"
 import { formatEventDate } from "@/lib/utils"
 
+
 export default function EventDetailPage() {
   const params = useParams()
   const eventId = params.id as string
