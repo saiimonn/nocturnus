@@ -19,6 +19,7 @@ npm run dev      # dev server on http://localhost:3000
 npm run build    # production build (also the only full typecheck — tsconfig is noEmit)
 npm run start    # serve the production build
 npm run lint     # eslint (flat config; note the script passes no path — it lints the project default)
+npm run seed     # wipe + reseed every Supabase table with faker data (dev DB only; needs SUPABASE_SERVICE_ROLE_KEY in .env.local)
 ```
 
 There is no test framework configured in this repo.
@@ -44,7 +45,11 @@ Navigation is data-driven: the `navGroups` array in `components/app-sidebar.tsx`
 
 The page files under `(dashboard)` are still **scaffolds** — no live data fetching. Live data is not wired up: `lib/supabase.ts` exports a `createSupabaseClient()` factory (anon key), but nothing calls it yet and there is no env wiring. Adding the real data layer is greenfield work. The sidebar also links to `/settings`, which does not exist yet.
 
-Until then, **all UI mock data lives in `lib/mock-data.ts`** — a single typed module whose shapes mirror the `DB.md` tables (with `password_hash` omitted) and whose foreign keys are internally consistent. It also exports lookup helpers (`getClubById`, `reservationsForClub`, `clubOwner`, …) and derived aggregates that are *not* DB tables (`dashboardMetrics`, `topClubsByVolume`, `clubPayouts`, `financeSummary`). New pages should import from here rather than hardcoding their own arrays; when the Supabase layer lands, swap these imports for queries returning the same types.
+The typed schema — the source of truth for every row shape — lives in **`lib/db.ts`** (the `Database` interface, 9 tables). UI mock data lives in **`lib/mock-data-owner.ts`** and **`lib/mock-data-user.ts`** (typed modules whose shapes mirror the `DB.md` tables); new pages should import from these rather than hardcoding arrays, and swap them for Supabase queries returning the same types once the data layer lands.
+
+### Seeding the database
+
+`npm run seed` (`scripts/seed.ts`, invoked via `tsx`) **wipes then repopulates** every Supabase table with constraint-valid faker data. It builds its **own** service-role Supabase client (distinct from the anon `lib/supabase.ts` singleton) to bypass RLS, so it needs `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`; it fails fast if either is missing and prints the target host before wiping. Deletes run in FK-reverse order and inserts in FK-safe order (`users → clubs → images/floor_plans/events/discount_codes → club_tables → reservations`; `owner_verification_tokens` is standalone), keeping the denormalized `club_id` consistent. Adjust generated data shapes in `scripts/seed/factories.ts` and volume via the `COUNTS` object at the top of `scripts/seed.ts`. Verification-token plaintexts are printed to the console for out-of-band redemption. This is a **dev-only** tool — never point it at production.
 
 ### API layer
 
