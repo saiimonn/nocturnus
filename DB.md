@@ -20,7 +20,6 @@ Before diving into the tables, here are the core rules applied across the databa
 * **Clubs** (1) → **Floor_Plans** (M)
 * **Clubs** (1) → **Events** (M)
 * **Clubs** (1) → **Club_Tables** (M)
-* **Clubs** (1) → **Discount_Codes** (M)
 * **Floor_Plans** (1) → **Club_Tables** (M)
 * **Club_Tables** (1) → **Reservations** (M)
 * **Events** (1) → **Reservations** (M) *(Optional relation)*
@@ -130,24 +129,7 @@ Special nights, DJs, or themed parties hosted by a club.
 | `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
 | `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
 
-### 8. `Discount_Codes`
-Promotional codes mapped to specific clubs for order discounts.
-
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `uuid` | PK, NO NULL | Discount Code identifier. |
-| `club_id` | `uuid` | FK, NO NULL | References `Clubs.id`. |
-| `code` | `varchar` | NO NULL | The actual text the user types (e.g., "SUMMER20"). |
-| `discount_type` | `varchar` | NO NULL | Math of the discount (`percentage` or `fixed_amount`). |
-| `discount_value`| `decimal` | NO NULL | Numerical value of the discount. |
-| `start_date` | `timestamp` | NO NULL | Start date of when the code becomes active. |
-| `end_date` | `timestamp` | NO NULL | End date of when the code expires. |
-| `usage_limit` | `int` | NO NULL | Max number of times the code can be used globally. |
-| `times_used` | `int` | NO NULL | Counter tracking total completed redemptions. |
-| `is_active` | `boolean` | NO NULL | Manual kill switch for the code. |
-| `min_order_value`| `decimal` | NO NULL | Subtotal required to redeem the code. |
-
-### 9. `Reservations`
+### 8. `Reservations`
 The central booking record linking guests, tables, clubs, and optionally, events.
 
 | Column | Type | Constraints | Description |

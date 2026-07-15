@@ -290,46 +290,6 @@ Bouncer scans a QR code to check a guest in (low-friction, token-only, no sessio
 
 ---
 
-### Discount Codes
-
-#### `POST /api/discount-codes/validate`
-Validate a promo code at checkout (before reservation submission).
-
-**Request body:**
-```json
-{
-  "club_id": "uuid",
-  "code": "SUMMER20",
-  "subtotal": 5000.00
-}
-```
-
-**Response (valid):**
-```json
-{
-  "valid": true,
-  "code": "SUMMER20",
-  "discount_type": "percentage",
-  "discount_value": 20,
-  "discount_amount": 1000.00
-}
-```
-
-**Response (invalid):**
-```json
-{
-  "valid": false,
-  "reason": "This code has expired"
-}
-```
-
-**Errors:**
-- `400` if required fields missing or subtotal invalid
-- `404` if code doesn't exist for that club
-- `500` on DB error
-
----
-
 ## Owner/Admin Routes (Authenticated — Currently `501 Not Implemented`)
 
 All owner routes require Supabase Auth session (header: `Authorization: Bearer <token>`). Currently throw `501 Not Implemented` until auth is wired.
@@ -599,61 +559,6 @@ Delete an event.
 
 ---
 
-### Discount Codes
-
-#### `POST /api/owner/clubs/[clubId]/discount-codes`
-Create a promotional code.
-
-**Auth:** Required (must own clubId)
-
-**Path params:** `clubId` (uuid)
-
-**Request body:**
-```json
-{
-  "code": "SUMMER20",
-  "discount_type": "percentage|fixed_amount",
-  "discount_value": 20,
-  "start_date": "2024-02-01T00:00:00Z",
-  "end_date": "2024-02-28T23:59:59Z",
-  "usage_limit": 100,
-  "min_order_value": 3000.00,
-  "is_active": true
-}
-```
-
----
-
-#### `PATCH /api/owner/clubs/[clubId]/discount-codes/[codeId]`
-Update a discount code.
-
-**Auth:** Required (must own clubId)
-
-**Path params:** `clubId` (uuid), `codeId` (uuid)
-
-**Request body:** (all optional)
-```json
-{
-  "code": "...",
-  "discount_type": "...",
-  "discount_value": 25,
-  "start_date": "...",
-  "end_date": "...",
-  "usage_limit": 150,
-  "min_order_value": 4000.00,
-  "is_active": false
-}
-```
-
----
-
-#### `DELETE /api/owner/clubs/[clubId]/discount-codes/[codeId]`
-Delete a promotional code.
-
-**Auth:** Required (must own clubId)
-
----
-
 ### Reservations Management
 
 #### `GET /api/owner/clubs/[clubId]/reservations?status=pending|confirmed|cancelled|checked_in`
@@ -724,6 +629,6 @@ Owner accepts/declines/cancels a reservation. Accepting generates a `qr_code_tok
 
 - All timestamps are ISO 8601 UTC (e.g. `2024-01-15T10:30:00Z`).
 - UUIDs are 36-character lowercase strings with hyphens.
-- Monetary values (prices, discounts) are decimals with up to 2 decimal places (PHP).
+- Monetary values (prices, minimum spend) are decimals with up to 2 decimal places (PHP).
 - All request/response bodies use snake_case keys.
 - The `X-Guest-Email` header on `GET /api/reservations/[id]` is kept out of the query string to avoid logging guest emails in browser history and access logs.

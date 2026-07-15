@@ -33,7 +33,6 @@ import {
   MartiniIcon,
   Book,
   Clipboard,
-  Tag,
 } from 'lucide-react';
 import React from 'react';
 
@@ -92,14 +91,6 @@ const eventsNavigation: NavigationType[] = [
     name: 'Events/Promos',
     href: '/owner-events',
     icon: Clipboard,
-  }
-]
-
-const discountsNavigation: NavigationType[] = [
-  {
-    name: 'Discount Codes',
-    href: '/discounts',
-    icon: Tag,
   }
 ]
 
@@ -196,7 +187,6 @@ const AdminSidebar = () => {
               {renderNavigationGroup(customizationNavigation)}
               {renderNavigationGroup(bookingNavigation)}
               {renderNavigationGroup(eventsNavigation)}
-              {renderNavigationGroup(discountsNavigation)}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

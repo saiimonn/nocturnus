@@ -4,7 +4,6 @@ import {
   club,
   clubTables,
   events,
-  discountCodes,
   reservations,
   tableMap,
 } from "@/lib/mock-data-owner"
@@ -23,9 +22,6 @@ const confirmed = reservations.filter((r) => r.status === "confirmed")
 const activeTables = clubTables.filter((t) => t.is_available)
 const upcomingEvents = events.filter(
   (e) => e.status === "published" && new Date(e.event_date) > now
-)
-const activePromos = discountCodes.filter(
-  (d) => d.is_active && new Date(d.end_date) > now
 )
 
 const estimatedRevenue = confirmed.reduce((sum, r) => {
@@ -61,11 +57,6 @@ const stats = [
     label: "Upcoming Events",
     value: upcomingEvents.length.toString(),
     sub: "published",
-  },
-  {
-    label: "Active Promos",
-    value: activePromos.length.toString(),
-    sub: "discount codes",
   },
 ]
 

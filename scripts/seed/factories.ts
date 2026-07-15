@@ -144,28 +144,6 @@ export function makeEvent(clubId: string): Tables["events"]["Insert"] {
   }
 }
 
-export function makeDiscountCode(clubId: string): Tables["discount_codes"]["Insert"] {
-  const start = faker.date.recent({ days: 10 })
-  const end = faker.date.soon({ days: 30, refDate: start })
-  const type = faker.helpers.arrayElement(["percentage", "fixed_amount"] as const)
-  return {
-    id: randomUUID(),
-    club_id: clubId,
-    code: `${faker.word.noun().toUpperCase()}${faker.number.int({ min: 5, max: 50 })}`,
-    discount_type: type,
-    discount_value:
-      type === "percentage"
-        ? faker.number.int({ min: 5, max: 50 })
-        : faker.number.float({ min: 100, max: 2000, fractionDigits: 2 }),
-    start_date: start.toISOString(),
-    end_date: end.toISOString(),
-    usage_limit: faker.number.int({ min: 50, max: 500 }),
-    times_used: faker.number.int({ min: 0, max: 50 }),
-    is_active: faker.datatype.boolean(),
-    min_order_value: faker.number.float({ min: 500, max: 5000, fractionDigits: 2 }),
-  }
-}
-
 export function makeReservation(
   tableId: string,
   clubId: string,
