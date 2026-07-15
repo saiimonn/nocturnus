@@ -1,36 +1,37 @@
-'use client'
-
 import React from "react"
 import Image from "next/image"
-import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Calendar, MapPin, ArrowRight, Bookmark } from "lucide-react"
-import { getEventById, getVenueByClubId } from "@/lib/mock-data-user"
 import { formatEventDate } from "@/lib/utils"
 
+export default async function EventDetailPage({ params }: { params: { id: string } }) {
 
-export default function EventDetailPage() {
-<<<<<<< HEAD
-  const params = useParams();
-  
-  
-  const eventId = Number(params.id);
-  const currentEvent = EVENTS.find((e) => e.id === eventId) || EVENTS[0];
-=======
-  const params = useParams()
-  const eventId = params.id as string
+  const { id } = await params
+  // --- TEMPORARY TEST CODE ---
+  const { supabase } = await import("@/lib/supabase")
+  const { data: allEvents } = await supabase.from('events').select('id, title').limit(3)
+  console.log("🔥 REAL IDs YOU CAN USE:", allEvents)
+  // ---------------------------
+  const eventRes = await fetch(`http://localhost:3000/api/events/${id}`, { cache: 'no-store' })
+  const eventData = await eventRes.json()
+  const currentEvent = eventData.event
 
-  const currentEvent = getEventById(eventId)
-  const venue = currentEvent ? getVenueByClubId(currentEvent.club_id) : null
+  let venue = { name: "Otus Venue", address: "Details loading..." }
+  if (currentEvent?.club_id) {
+    const clubRes = await fetch(`http://localhost:3000/api/clubs/${currentEvent.club_id}`, { cache: 'no-store' })
+    if (clubRes.ok) {
+      const clubData = await clubRes.json()
+      venue = clubData.club || venue
+    }
+  }
 
-  if (!currentEvent || !venue) {
+  if (!currentEvent) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <p className="text-zinc-500">Event not found.</p>
+        <p className="text-zinc-500">Event not found in the database.</p>
       </div>
     )
   }
->>>>>>> main
 
   return (
     <div className="min-h-screen w-full bg-black text-white -mt-20 z-0">
@@ -39,13 +40,13 @@ export default function EventDetailPage() {
         {currentEvent.image_url && (
           <Image
             src={currentEvent.image_url}
-            alt={currentEvent.title}
+            alt={currentEvent.title || "Event Image"}
             fill
             priority
             className="object-cover select-none"
           />
         )}
-        <div className="absolute inset-0 bg-linear-to-t from-black via-black/40 to-black/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/10" />
 
         <div className="absolute bottom-0 left-0 w-full px-8 pb-8 md:px-16">
           <p className="text-[11px] uppercase tracking-widest text-gray-400">
@@ -83,7 +84,7 @@ export default function EventDetailPage() {
                   Schedule
                 </p>
                 <p className="text-sm font-semibold text-zinc-200">
-                  {formatEventDate(currentEvent.event_date)}
+                  {currentEvent.event_date ? formatEventDate(currentEvent.event_date) : "Date TBA"}
                 </p>
               </div>
             </div>
@@ -133,7 +134,7 @@ export default function EventDetailPage() {
                     </p>
                   <div className="flex justify-between items-end mt-6">
                     <p className="text-xs text-zinc-400">
-             1         Select a table from the floor plan to get started.
+                      Select a table from the floor plan to get started.
                     </p>
                   </div>
                   </div>  
