@@ -170,11 +170,6 @@ const AdminSidebar = () => {
       <SidebarContent>
         <SidebarHeader>
           <div className="flex items-center gap-2 py-2">
-            {/* Icon stays visible in collapsed state */}
-            <div className="flex size-8 items-center justify-center">
-              <img src="/BijouLOGO2(PINK).svg" alt="Logo" className="h-5" />
-            </div>
-
             {/* This section hides in collapsed icon mode */}
             <div className="grid flex-1 text-left group-data-[collapsible=icon]:hidden">
               <span className="truncate text-xs font-semibold">Nocturnus</span>
