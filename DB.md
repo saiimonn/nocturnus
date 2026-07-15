@@ -71,7 +71,7 @@ The primary entity for a nightclub venue.
 | `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
 | `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
 | `slug` | `varchar` | NO NULL, UNIQUE | Identifier for club. |
-| `status` | `varchar` | NO NULL, DEFAULT `active` | Accepts: `active`, `inactive`. A superadmin sets `inactive` to take a venue offline (e.g. fraud investigation) without deleting its data. |
+| `status` | `varchar` | NO NULL, DEFAULT `draft` | Accepts: `draft`, `active`, `inactive`. `draft` is the initial state when a superadmin creates the club shell during onboarding — hidden from consumers until the **owner** publishes it (`draft` → `active`) from the Owner Portal. A superadmin sets `inactive` to take a live venue offline (e.g. fraud investigation) without deleting its data. Consumer surfaces show `active` only; both `draft` and `inactive` are hidden. |
 
 ### 4. `Club_Images`
 Additional gallery images for a specific club.

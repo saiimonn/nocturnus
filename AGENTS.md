@@ -84,7 +84,9 @@ This is the Superadmin (God-Mode) portal for Otus — a Cebu nightclub reservati
 
 Three workflows define what this portal is for:
 
-1. **B2B white-glove onboarding.** Venue owners cannot self-serve signup. A superadmin creates the club record, then generates a secure one-time token tied to that club. The token is handed to the venue manager out-of-band; they redeem it on the Owner Portal (in the main app) to create their authenticated account. This exists to prevent fraud and to guarantee the owner is linked to the correct venue.
+1. **B2B white-glove onboarding.** Venue owners cannot self-serve signup. A superadmin creates the club record (always as `status = 'draft'`), then generates a secure one-time token tied to that club. The token is handed to the venue manager out-of-band; they redeem it on the Owner Portal (in the main app) to create their authenticated account. This exists to prevent fraud and to guarantee the owner is linked to the correct venue.
+
+   **Clubs status lifecycle:** `draft` → `active` → `inactive`. A superadmin-created shell starts as `draft` and is **hidden from all consumer surfaces** — `listClubs`/`getClub` in `lib/api/clubs/api.ts` filter `.eq("status", "active")`, so `draft` and `inactive` never surface. Publishing (`draft` → `active`) is the **owner's** decision, done from the Owner Portal via `updateClub` (`requireClubOwner`) — *when* a venue is showcased is up to the owner, not the superadmin. `inactive` is a superadmin-only enforcement state (fraud offline); owners cannot set it.
 
 2. **Global reservation ledger.** A master view of every booking across every club, searchable by guest email, phone, or `qr_code_token`. Guest identity is denormalized onto the reservation row (`guest_name`, `guest_email`, `guest_contact`) specifically so bookings work for walk-ins and guests without accounts — do not assume a reservation joins to a user.
 
