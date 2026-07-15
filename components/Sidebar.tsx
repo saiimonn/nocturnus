@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +36,7 @@ import {
   Clipboard,
   Tag,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import React from 'react';
 
 import {
@@ -103,13 +105,28 @@ const discountsNavigation: NavigationType[] = [
   }
 ]
 
-const user = {
-  name: 'Admin User',
-  email: 'admin@nocturnus.com',
-  avatar: null,
-};
+export interface SidebarUser {
+  name: string;
+  email: string;
+  avatar: string | null;
+}
 
-const AdminSidebar = () => {
+const AdminSidebar = ({ user }: { user: SidebarUser }) => {
+  const router = useRouter();
+  const [signingOut, setSigningOut] = React.useState(false);
+
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/auth/login');
+      router.refresh();
+    } finally {
+      setSigningOut(false);
+    }
+  }
+
   const renderNavigationGroup = (
     items: NavigationType[],
     hasSubmenu: boolean = true
@@ -172,7 +189,12 @@ const AdminSidebar = () => {
           <div className="flex items-center gap-2 py-2">
             {/* Icon stays visible in collapsed state */}
             <div className="flex size-8 items-center justify-center">
-              <img src="/BijouLOGO2(PINK).svg" alt="Logo" className="h-5" />
+              <Image
+                src="/logo.svg"
+                alt="logo"
+                height={16}
+                width={16}
+              />
             </div>
 
             {/* This section hides in collapsed icon mode */}
@@ -257,18 +279,13 @@ const AdminSidebar = () => {
                 align="end"
                 sideOffset={4}
               >
-                <DropdownMenuItem>
-                  <User className="size-4 mr-2" />
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="size-4 mr-2" />
-                  Account Settings
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600 hover:text-red-700">
+                <DropdownMenuItem
+                  className="text-red-600 hover:text-red-700"
+                  disabled={signingOut}
+                  onClick={handleSignOut}
+                >
                   <LogOut className="size-4 mr-2" />
-                  Sign out
+                  {signingOut ? 'Signing out…' : 'Sign out'}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
