@@ -1,13 +1,54 @@
 'use client'
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import VenueCard from "./components/venueCard"
-import { venues } from "@/lib/mock-data-user"
+import type { Club } from "@/lib/types"
+
+type ClubListItem = Pick<
+  Club,
+  "id" | "name" | "slug" | "description" | "address" | "cover_image_url" | "operating_hours"
+>
 
 export default function BrowsePage() {
+  const [venues, setVenues] = useState<ClubListItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [activeVenueId, setActiveVenueId] = useState<string | null>(null)
   const [search, setSearch] = useState("")
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadClubs() {
+      setLoading(true)
+      setError(null)
+      try {
+        const res = await fetch("/api/clubs")
+        if (!res.ok) {
+          const data = await res.json().catch(() => null)
+          throw new Error(data?.message ?? "Unable to load venues.")
+        }
+        const data = await res.json()
+        if (!cancelled) {
+          setVenues(data.clubs ?? [])
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Unable to load venues.")
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadClubs()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const filteredVenues = useMemo(() => {
     return venues.filter((venue) => {
@@ -17,7 +58,7 @@ export default function BrowsePage() {
         venue.address.toLowerCase().includes(search.toLowerCase())
       )
     })
-  }, [search])
+  }, [search, venues])
 
   return (
     <div className="min-h-screen w-full  px-8 py-12 text-white md:px-16">
@@ -43,7 +84,11 @@ export default function BrowsePage() {
       </div>
 
       {/* Venue grid */}
-      {filteredVenues.length === 0 ? (
+      {loading ? (
+        <div className="pt-16 text-sm text-gray-500">Loading venues…</div>
+      ) : error ? (
+        <div className="pt-16 text-sm text-red-400">{error}</div>
+      ) : filteredVenues.length === 0 ? (
         <div className="pt-16 text-sm text-gray-500">
           No venues found{search ? ` for "${search}"` : ""}.
         </div>
@@ -64,7 +109,7 @@ export default function BrowsePage() {
               <VenueCard
                 name={venue.name}
                 address={venue.address}
-                cover_image_url={venue.cover_image_url}
+                cover_image_url={venue.cover_image_url ?? undefined}
               />
             </Link>
           ))}
