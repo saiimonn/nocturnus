@@ -9,13 +9,13 @@ Before diving into the tables, here are the core rules applied across the databa
 * **Primary Keys:** All PKs (`id`) use UUID v4 — globally unique, non-sequential identifiers.
 * **Timestamps:** All `created_at`, `updated_at`, and event/reservation times are stored in UTC. Display conversion is handled at the application layer.
 * **Denormalization:** The `club_id` is intentionally denormalized on both `Club_Tables` and `Reservations` to avoid unnecessary joins in high-frequency queries.
-* **Unique Constraints:** `Users.email` carries a `UNIQUE` constraint at the database level.
+* **Unique Constraints:** `Users.email` carries a `UNIQUE` constraint at the database level. `Clubs.owner_id` is also `UNIQUE`, enforcing **one club per owner** at the database level.
 
 ---
 
 ## 🔗 Entity Relationships
 
-* **Users** (1) → **Clubs** (M) *(via `owner_id`)*
+* **Users** (1) → **Clubs** (1) *(via `owner_id`, which is `UNIQUE`; an owner owns exactly one club)*
 * **Clubs** (1) → **Club_Images** (M)
 * **Clubs** (1) → **Floor_Plans** (M)
 * **Clubs** (1) → **Events** (M)
@@ -62,7 +62,7 @@ The primary entity for a nightclub venue.
 | Column | Type | Constraints | Description |
 | :--- | :--- | :--- | :--- |
 | `id` | `uuid` | PK, NO NULL | Unique club identifier. |
-| `owner_id` | `uuid` | FK, NO NULL | References `Users.id`. |
+| `owner_id` | `uuid` | FK, NO NULL, UNIQUE | References `Users.id`. `UNIQUE`, so an owner owns at most one club. |
 | `name` | `varchar` | NO NULL | Club name. |
 | `description` | `text` | NULLABLE | Club description / about. |
 | `address` | `varchar` | NO NULL | Physical address. |

@@ -90,7 +90,7 @@ const bookingNavigation: NavigationType[] = [
 const eventsNavigation: NavigationType[] = [
   {
     name: 'Events/Promos',
-    href: '/events',
+    href: '/owner-events',
     icon: Clipboard,
   }
 ]
