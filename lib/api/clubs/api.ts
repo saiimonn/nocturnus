@@ -114,6 +114,10 @@ export const createClub = handle(async () => {
   throw notImplemented("Creating a club is not implemented yet")
 })
 
+// The owner's edit path — this is also where publishing lives: an owner flips
+// their club from `draft` to `active` (making it visible to consumers) when they
+// choose to showcase it. Owners may only move between `draft` and `active`;
+// `inactive` is a superadmin-only enforcement state and must be rejected here.
 export const updateClub = handle(
   async (_request, context: RouteContext<{ clubId: string }>) => {
     const { clubId } = await context.params

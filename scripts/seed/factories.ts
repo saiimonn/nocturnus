@@ -57,7 +57,8 @@ export function makeClub(ownerId: string): Tables["clubs"]["Insert"] {
     operating_hours: operatingHours(),
     cover_image_url: faker.image.url(),
     status: faker.helpers.weightedArrayElement([
-      { value: "active", weight: 9 },
+      { value: "active", weight: 8 },
+      { value: "draft", weight: 1 },
       { value: "inactive", weight: 1 },
     ]),
     created_at: ts,

@@ -21,7 +21,7 @@ export interface Club {
   cover_image_url: string | null
   created_at: string
   updated_at: string
-  status: "active" | "inactive"
+  status: "draft" | "active" | "inactive"
 }
 
 export interface OperatingHours {
