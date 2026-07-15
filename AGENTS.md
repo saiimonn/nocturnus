@@ -84,9 +84,17 @@ This is the Superadmin (God-Mode) portal for Otus — a Cebu nightclub reservati
 
 Three workflows define what this portal is for:
 
-1. **B2B white-glove onboarding.** Venue owners cannot self-serve signup. A superadmin creates the club record (always as `status = 'draft'`), then generates a secure one-time token tied to that club. The token is handed to the venue manager out-of-band; they redeem it on the Owner Portal (in the main app) to create their authenticated account. This exists to prevent fraud and to guarantee the owner is linked to the correct venue.
+1. **B2B white-glove onboarding.** Venue owners cannot self-serve signup — an account exists only by redeeming a token a superadmin issued. The order is **owner first, club second**, and both steps after the first happen *in this repo*:
 
-   **Clubs status lifecycle:** `draft` → `active` → `inactive`. A superadmin-created shell starts as `draft` and is **hidden from all consumer surfaces** — `listClubs`/`getClub` in `lib/api/clubs/api.ts` filter `.eq("status", "active")`, so `draft` and `inactive` never surface. Publishing (`draft` → `active`) is the **owner's** decision, done from the Owner Portal via `updateClub` (`requireClubOwner`) — *when* a venue is showcased is up to the owner, not the superadmin. `inactive` is a superadmin-only enforcement state (fraud offline); owners cannot set it.
+   1. A superadmin generates a secure one-time token in the superadmin portal. It is **not tied to any club** — it carries only an expiry.
+   2. The token is handed to the venue manager out-of-band and redeemed **here** (`redeemVerificationToken`) to create their authenticated `owner` account. Redemption creates the user and marks the token `used`; it links no club, because none exists yet.
+   3. The now-authenticated owner registers their **own** club **here**, as `draft`. This is how `Clubs.owner_id` gets its value.
+
+   **A token gates account creation, not venue identity.** It proves the holder is an approved owner; it does not prove they own any particular venue. Nothing structurally stops a token holder from registering a club under a name that isn't theirs and publishing it — the backstop is reactive: a superadmin spots it and flips the club to `inactive`. That trade is accepted deliberately; do not write code or docs that assume the token already guarantees venue identity.
+
+   **Why the token has no `club_id`:** `Clubs.owner_id` is `FK, NO NULL`, so a club cannot exist before its owner does. Owner-first is what makes that constraint satisfiable, and it is why `DB.md` states no owner association is stored on the token. Club creation lives in this repo, never in the superadmin portal.
+
+   **Clubs status lifecycle:** `draft` → `active` → `inactive`. A club is created by its **owner** as `draft` and is **hidden from all consumer surfaces** — `listClubs`/`getClub` in `lib/api/clubs/api.ts` filter `.eq("status", "active")`, so `draft` and `inactive` never surface. The owner fills in images, description, and hours, then publishes (`draft` → `active`) via `updateClub` (`requireClubOwner`) — *when* a venue is showcased is up to the owner, not the superadmin. `inactive` is a superadmin-only enforcement state (fraud offline); owners cannot set it.
 
 2. **Global reservation ledger.** A master view of every booking across every club, searchable by guest email, phone, or `qr_code_token`. Guest identity is denormalized onto the reservation row (`guest_name`, `guest_email`, `guest_contact`) specifically so bookings work for walk-ins and guests without accounts — do not assume a reservation joins to a user.
 
