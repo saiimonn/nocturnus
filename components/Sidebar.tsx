@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +35,7 @@ import {
   Book,
   Clipboard,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import React from 'react';
 
 import {
@@ -94,13 +96,36 @@ const eventsNavigation: NavigationType[] = [
   }
 ]
 
-const user = {
-  name: 'Admin User',
-  email: 'admin@nocturnus.com',
-  avatar: null,
-};
+const discountsNavigation: NavigationType[] = [
+  {
+    name: 'Discount Codes',
+    href: '/discounts',
+    icon: Tag,
+  }
+]
 
-const AdminSidebar = () => {
+export interface SidebarUser {
+  name: string;
+  email: string;
+  avatar: string | null;
+}
+
+const AdminSidebar = ({ user }: { user: SidebarUser }) => {
+  const router = useRouter();
+  const [signingOut, setSigningOut] = React.useState(false);
+
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/auth/login');
+      router.refresh();
+    } finally {
+      setSigningOut(false);
+    }
+  }
+
   const renderNavigationGroup = (
     items: NavigationType[],
     hasSubmenu: boolean = true
@@ -161,6 +186,16 @@ const AdminSidebar = () => {
       <SidebarContent>
         <SidebarHeader>
           <div className="flex items-center gap-2 py-2">
+            {/* Icon stays visible in collapsed state */}
+            <div className="flex size-8 items-center justify-center">
+              <Image
+                src="/logo.svg"
+                alt="logo"
+                height={16}
+                width={16}
+              />
+            </div>
+
             {/* This section hides in collapsed icon mode */}
             <div className="grid flex-1 text-left group-data-[collapsible=icon]:hidden">
               <span className="truncate text-xs font-semibold">Nocturnus</span>
@@ -242,18 +277,13 @@ const AdminSidebar = () => {
                 align="end"
                 sideOffset={4}
               >
-                <DropdownMenuItem>
-                  <User className="size-4 mr-2" />
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="size-4 mr-2" />
-                  Account Settings
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600 hover:text-red-700">
+                <DropdownMenuItem
+                  className="text-red-600 hover:text-red-700"
+                  disabled={signingOut}
+                  onClick={handleSignOut}
+                >
                   <LogOut className="size-4 mr-2" />
-                  Sign out
+                  {signingOut ? 'Signing out…' : 'Sign out'}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
