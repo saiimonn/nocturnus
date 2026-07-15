@@ -3,7 +3,6 @@ import type {
   ClubImage,
   ClubTable,
   Event,
-  DiscountCode,
   Reservation,
 } from "./types"
 
@@ -212,48 +211,6 @@ export const events: Event[] = [
     status: "cancelled",
     created_at: "2026-06-10T10:00:00Z",
     updated_at: "2026-06-25T16:00:00Z",
-  },
-]
-
-export const discountCodes: DiscountCode[] = [
-  {
-    id: "d1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
-    club_id: club.id,
-    code: "NYE2026",
-    discount_type: "percentage",
-    discount_value: 15,
-    start_date: "2026-11-01T00:00:00Z",
-    end_date: "2026-12-31T23:59:59Z",
-    usage_limit: 100,
-    times_used: 0,
-    is_active: true,
-    min_order_value: 15000,
-  },
-  {
-    id: "d2a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
-    club_id: club.id,
-    code: "EARLYBIRD",
-    discount_type: "fixed_amount",
-    discount_value: 2000,
-    start_date: "2026-07-01T00:00:00Z",
-    end_date: "2026-07-31T23:59:59Z",
-    usage_limit: 50,
-    times_used: 12,
-    is_active: true,
-    min_order_value: 10000,
-  },
-  {
-    id: "d3a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
-    club_id: club.id,
-    code: "VIP500",
-    discount_type: "fixed_amount",
-    discount_value: 500,
-    start_date: "2026-05-01T00:00:00Z",
-    end_date: "2026-06-30T23:59:59Z",
-    usage_limit: 30,
-    times_used: 30,
-    is_active: false,
-    min_order_value: 5000,
   },
 ]
 
