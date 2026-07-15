@@ -17,7 +17,7 @@ import {
 const COUNTS = {
   owners: 8,
   admins: 2,
-  clubsPerOwner: 2,
+  clubsPerOwner: 1,
   imagesPerClub: 4,
   floorPlansPerClub: 2,
   tablesPerFloorPlan: 8,
