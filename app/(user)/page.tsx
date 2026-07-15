@@ -8,7 +8,7 @@ import SearchSuggestionsCard from "@/components/searchSuggestionsCard";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, MapIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-
+import { GoogleAiChat } from "@/components/googleAiChat";
 
 export default function Home() {
   const router = useRouter();
@@ -179,7 +179,7 @@ export default function Home() {
               {venueCards.map((venue, cardIndex) => (
                 <div
                   key={`card-${cardIndex}-${venue.name}`}
-                  className="w-full shrink-0 px-2 md:w-1/2 xl:w-1/3 hover:scale-90 hover:skew-y-1 transition-all duration-300 cursor-pointer"
+                  className="w-full shrink-0 px-2 md:w-1/2 xl:w-1/3 hover:scale-90 transition-all duration-300 cursor-pointer"
                 >
                   <div className="relative group overflow-hidden rounded-md border border-[#0a0a0a] aspect-4/3 xl:aspect-video">
                     <Image
@@ -299,6 +299,7 @@ export default function Home() {
 
         <Separator className="max-w-6xl mx-auto mb-24 bg-[#1a1a1a]" />
 
+       
         <section className = "w-full max-w-5xl mb-24 relative">
           <h2 className="text-2xl md:text-3xl font-medium mb-16 text-left uppercase">how to book</h2>
 

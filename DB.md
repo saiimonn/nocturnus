@@ -30,7 +30,7 @@ Before diving into the tables, here are the core rules applied across the databa
 ## 🗄️ Table Definitions
 
 ### 1. `Users`
-Core identity table for all platform users (guests, owners, and admins).
+Core identity table for platform users. Only `owner` and `admin` roles have accounts. Guests do not register — they submit reservations via a form and receive email confirmations directly.
 
 | Column | Type | Constraints | Description |
 | :--- | :--- | :--- | :--- |
@@ -39,7 +39,8 @@ Core identity table for all platform users (guests, owners, and admins).
 | `email` | `varchar` | NO NULL, UNIQUE| Unique email address. |
 | `contact_number`| `varchar` | NULLABLE | Mobile / contact number. |
 | `password_hash` | `varchar` | NO NULL | Bcrypt-hashed password. |
-| `role` | `varchar` | NO NULL | Accepts: `guest`, `owner`, or `admin`. |
+| `role` | `varchar` | NO NULL | Accepts: `owner` or `admin`. |
+| `status` | `varchar` | NO NULL, DEFAULT `active` | Accepts: `active`, `suspended`. A superadmin sets `suspended` to lock out a compromised or fraudulent account without deleting it. |
 | `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
 | `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
 
@@ -52,6 +53,7 @@ Handles the one-time token flow for verifying nightclub owners. Tokens are gener
 | `token_hash` | `varchar` | NO NULL | Hashed one-time token. |
 | `expires_at` | `timestamp` | NO NULL | Token expiry datetime (UTC). |
 | `used` | `boolean` | NO NULL | TRUE once token is consumed. |
+| `revoked` | `boolean` | NO NULL, DEFAULT `false` | TRUE if a superadmin manually invalidated the token before it was used or expired (e.g. it leaked before reaching the owner). A revoked token must be rejected at redemption even if `expires_at` is still in the future. |
 | `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
 
 ### 3. `Clubs`
@@ -68,6 +70,8 @@ The primary entity for a nightclub venue.
 | `cover_image_url`| `varchar` | NULLABLE | URL to cover photo in object storage. |
 | `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
 | `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
+| `slug` | `varchar` | NO NULL, UNIQUE | Identifier for club. |
+| `status` | `varchar` | NO NULL, DEFAULT `active` | Accepts: `active`, `inactive`. A superadmin sets `inactive` to take a venue offline (e.g. fraud investigation) without deleting its data. |
 
 ### 4. `Club_Images`
 Additional gallery images for a specific club.
@@ -89,6 +93,7 @@ Distinct physical spaces within a club (e.g., Ground Floor, VIP Mezzanine).
 | `club_id` | `uuid` | FK, NO NULL | References `Clubs.id`. |
 | `name` | `varchar` | NO NULL | Floor plan label (e.g., "Ground Floor"). |
 | `image_url` | `varchar` | NO NULL | URL to the 2D floor plan canvas image. |
+| `labels` | `jsonb` | NULLABLE | Array of static annotations `[{text, x, y}]` for area labels (e.g., "STAGE", "BAR"). Coordinates use 0.0–1.0 relative to the canvas, same system as `Club_Tables.pos_x`/`pos_y`. |
 | `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
 | `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
 

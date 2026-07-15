@@ -6,113 +6,92 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # AGENTS.md
 
-This file provides guidance to coding agents working in this repository. It is the single source of truth for project context — `CLAUDE.md` only points here.
+This file provides guidance to coding agents working in this repository. It is the single source of truth — `CLAUDE.md` only points here.
 
-## Keeping this file current
+## Keeping This File Current
 
-**Every feature change must update the context in `AGENTS.md`.** When you add, remove, or meaningfully alter a feature, edit this file in the same change so it keeps describing what the code actually does — not what it used to do, and not what it is supposed to do someday. In particular:
-
-- Move an item out of "Target design" and into the body once it is really built.
-- Update "Current state", "Stack", and "Commands" when dependencies, scripts, or the presence of a backend / auth / tests change.
-- Revise "Architecture" when a route group, the data layer, or the floorplan editor changes shape.
-- Correct the baseline lint/typecheck counts if your change moves them.
-- Amend "Conventions" when a convention is genuinely established or abandoned.
-
-A pull request that changes behavior but leaves this file stale is incomplete.
-
-# Nocturnus — Cebu Nightclub Reservation System
-
-A PWA for digitizing nightclub table reservations and VIP bottle service.
-
-**Current state: front-end prototype.** Every screen renders from hardcoded data. There is no database, no auth, no network layer — no Supabase client, no `route.ts` handlers, no server actions, and not a single `fetch()` in `app/`, `components/`, or `lib/`. Treat `DB.md` and the "Target design" section below as the spec being built toward, not as a description of code that exists.
-
-## Stack
-- **Framework:** Next.js 16.2.4 (App Router) + React 19.2.4 + TypeScript (strict)
-- **Styling:** Tailwind CSS v4, tw-animate-css, shadcn/ui (`base-vega` style via Base UI, not Radix)
-- **Icons:** lucide-react
-- **Canvas:** Konva + react-konva + use-image (owner floorplan editor)
-- **Fonts:** Geist + Inter (next/font)
-- **Smooth scroll:** Lenis (mounted in the `(user)` layout only)
-
-Installed but unused: `leaflet` / `react-leaflet` (only leftover `.club-popup .leaflet-popup-*` rules in `globals.css`).
+**Every change to this repository must be accompanied by an update to `AGENTS.md` when it invalidates or extends anything written here.** That includes: adding or removing a dependency, changing the stack or build commands, introducing a new architectural pattern, wiring up the data layer, resolving one of the open questions below. If you finish a task and this file now describes a repo that no longer exists, you are not done. Update it in the same change.
 
 ## Commands
-- `npm run dev` — dev server
-- `npm run build` — production build
-- `npm run start` — serve production build
-- `npm run lint` — ESLint (bare `eslint`, flat config)
-- `npx tsc --noEmit` — typecheck
 
-There is no test framework, no test script, and no tests.
+```bash
+npm run dev      # dev server on http://localhost:3000
+npm run build    # production build (also the only full typecheck — tsconfig is noEmit)
+npm run start    # serve the production build
+npm run lint     # eslint (flat config; note the script passes no path — it lints the project default)
+npm run seed     # wipe + reseed every Supabase table with faker data (dev DB only; needs SUPABASE_SERVICE_ROLE_KEY in .env.local)
+```
 
-**The baseline is not clean.** Before you start, `npm run lint` reports 4 errors / 32 warnings and `npx tsc --noEmit` reports 2 errors (`components/ui/tooltip.tsx` `asChild`, `components/userEventCard.tsx` implicit `any`). The most notable lint error is `react-hooks/set-state-in-effect` in `hooks/use-mobile.ts`. Don't assume you introduced these — diff against the baseline before claiming a regression, and don't silently "fix" them as drive-by work.
+There is no test framework configured in this repo.
+
+## Stack Realities
+
+These differ from what you likely have memorized. Check before writing code.
+
+- **Next.js 16 (App Router).** Read the relevant guide in `node_modules/next/dist/docs/` before writing Next-specific code — APIs and conventions have breaking changes vs. older versions. Dynamic route `params` is a `Promise` and must be awaited (see `app/(dashboard)/reservations/[id]/page.tsx`).
+- **Tailwind v4, CSS-first.** There is no `tailwind.config.*`. Design tokens live in `@theme inline` and `:root`/`.dark` blocks in `app/globals.css`. `--radius: 0rem` is deliberate — this UI has square corners.
+- **shadcn/ui `base-vega` style, built on `@base-ui/react` — not Radix.** Composition uses the `render` prop, not `asChild`:
+  ```tsx
+  <SidebarMenuButton render={<Link href={item.url} />} />
+  ```
+  When adding shadcn components, let the CLI resolve them from `components.json` rather than pasting Radix-based snippets from memory.
+- Path alias `@/*` maps to the repo root.
 
 ## Architecture
 
-### Two route groups with genuinely different visual systems
+`/` (`app/page.tsx`) is a bare redirect to `/dashboard`. All real screens live under the `(dashboard)` route group, whose layout (`app/(dashboard)/layout.tsx`) wraps children in `SidebarProvider` + `AppSidebar` + `SidebarInset`. Adding a page under `(dashboard)` gets the chrome for free.
 
-This is the thing that trips people up. `globals.css` defines a light `:root` palette and a `.dark` block — **but the `dark` class is never applied anywhere.** So:
+Navigation is data-driven: the `navGroups` array in `components/app-sidebar.tsx` is the single source of truth for sidebar structure. Adding a route means adding an entry there, not editing JSX. Active state uses `pathname.startsWith(url)` unless the item sets `exact: true` — so nested routes like `/finance/payouts` will light up their parent (`/finance`) too unless that parent is marked exact.
 
-- **`app/(user)/`** — consumer PWA. Bypasses the token system and **hardcodes dark colors** (`bg-black text-white`, `bg-linear-to-b from-black to-[#080808]`). Layout is `'use client'` because it initializes Lenis in an effect. Wraps `UserNav` + `Footer`.
-- **`app/(owner)/`** — B2B dashboard. Uses semantic tokens (`bg-background text-foreground`), which resolve to the **light** `:root` values. Server component wrapping `SidebarProvider` + `AdminSidebar` + `AdminHeader`.
-- **`app/auth/`** — login / register. Outside both groups.
+The page files under `(dashboard)` are still **scaffolds** — no live data fetching. Live data is not wired up: `lib/supabase.ts` exports a `createSupabaseClient()` factory (anon key), but nothing calls it yet and there is no env wiring. Adding the real data layer is greenfield work. The sidebar also links to `/settings`, which does not exist yet.
 
-If you add a screen, match the group you're in. Don't "fix" the owner dashboard to be dark or the user routes to use tokens without being asked — the split is load-bearing today.
+The typed schema — the source of truth for every row shape — lives in **`lib/db.ts`** (the `Database` interface, 9 tables). UI mock data lives in **`lib/mock-data-owner.ts`** and **`lib/mock-data-user.ts`** (typed modules whose shapes mirror the `DB.md` tables); new pages should import from these rather than hardcoding arrays, and swap them for Supabase queries returning the same types once the data layer lands.
 
-Owner routes (from `components/Sidebar.tsx`): `/dashboard`, `/club/details`, `/club/layout`, `/booking/requests`, `/booking/history`, `/events`.
+### Seeding the database
 
-### Data layer: hardcoded, and not centralized
+`npm run seed` (`scripts/seed.ts`, invoked via `tsx`) **wipes then repopulates** every Supabase table with constraint-valid faker data. It builds its **own** service-role Supabase client (distinct from the anon `lib/supabase.ts` singleton) to bypass RLS, so it needs `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`; it fails fast if either is missing and prints the target host before wiping. Deletes run in FK-reverse order and inserts in FK-safe order (`users → clubs → images/floor_plans/events/discount_codes → club_tables → reservations`; `owner_verification_tokens` is standalone), keeping the denormalized `club_id` consistent. Adjust generated data shapes in `scripts/seed/factories.ts` and volume via the `COUNTS` object at the top of `scripts/seed.ts`. Verification-token plaintexts are printed to the console for out-of-band redemption. This is a **dev-only** tool — never point it at production.
 
-There are **two competing sources of truth**, and new work keeps adding to the wrong one:
+Every seeded user shares one bcrypt-hashed password (`bcryptjs`, hashing the `SEED_PASSWORD` constant in `scripts/seed.ts`), so any of them can log in. Two fixed, memorable accounts lead the set and are forced `active`: **`owner@otus.dev`** (role `owner`, owns clubs) and **`admin@otus.dev`** (role `admin`). Default password is `password123` — the seed run prints the accounts and password at the end.
 
-1. `data/placeholder.ts` — exports `venues: Venue[]` and `getVenueBySlug()`. Consumed by `app/(user)/browse/page.tsx` and `app/(user)/club/[slug]/page.tsx`.
-2. **Page-local `const` arrays** — e.g. `EVENTS` in `app/(user)/events/[id]/page.tsx`, `stats` in `app/(owner)/dashboard/page.tsx`, `initialTables` in the floorplan canvas.
+### API layer
 
-Prefer extending `data/placeholder.ts` over adding another page-local array. When the backend lands, module #1 is the seam that gets replaced; page-local arrays are all separate migrations.
+REST routes under `app/api/` follow a **thin-route** convention: each `route.ts` is a one-line re-export that maps HTTP verbs to named handlers, and all logic lives in `lib/api/<feature>/api.ts`. Example:
 
-### Floorplan editor (`app/(owner)/club/layout/floorplanCanvas.tsx`)
-
-The single most complex file in the repo (~500 lines). A Konva `<Stage>` with `<Group>`-wrapped tables supporting drag, `<Transformer>` resize, add/edit/delete via shadcn `<Dialog>`.
-
-**What it actually does, which differs from the spec:**
-- Stage is a **fixed 800×600** and table `x`/`y` are **absolute pixels**. The `pos_x`/`pos_y` percentage scheme (0.0–1.0) in `DB.md` is *not implemented*. There is no responsive recalculation.
-- The blueprint image is uploaded client-side via `URL.createObjectURL` and held in local state. It is never persisted, and the object URL is revoked on unmount.
-- Table state (`Table[]`) lives entirely in `useState`. Nothing is saved.
-- Its local `Table` type (`name`, `pax`, `price`, `shape`, `width`/`height`/`radius`) does **not** match `Club_Tables` in `DB.md` (`label`, `capacity`, `minimum_spend`, `category`, `pos_x`/`pos_y`). Reconciling these is unfinished work.
-
-Konva rules that *are* honored and should stay: the blueprint image sits in a `<Layer listening={false}>`, interactive tables in a separate `<Layer>`. Note it's imported directly (no `next/dynamic` / `ssr: false`) — if you hit an SSR canvas error after touching it, that's why.
-
-## Conventions
-- **Zero-Comment Rule:** no inline or block comments. (Three violations exist — `floorplanCanvas.tsx:69`, `currentEvents/page.tsx:16`, `events/[id]/page.tsx:50`. Don't add more; removing them is fair game.)
-- Co-locate route-specific components in `app/(route)/components/` (see `app/(user)/browse/components/`).
-- Shared components live flat in `components/`; shadcn primitives in `components/ui/`.
-- Naming is inconsistent (`Header.tsx`, `Sidebar.tsx`, `UserNav.tsx` vs `footer.tsx`, `userEventCard.tsx`, `dateRangeFilter.tsx`). Match the neighbors of whatever you touch rather than mass-renaming.
-- Use `cn()` from `@/lib/utils` for class merging. Import via the `@/*` alias.
-- Tailwind v4 syntax (`@import "tailwindcss"`, `@theme inline`, `@custom-variant`) — no `tailwind.config`.
-- `docs/` and `.worktrees/` are **gitignored**. Plans written under `docs/superpowers/` are local-only and invisible to reviewers.
-
-## Next.js 16
-As stated at the top of this file: this is not the Next.js in your training data. **Read the relevant guide in `node_modules/next/dist/docs/` before writing code**, and heed deprecation notices.
-
-Concretely, `params` is a Promise. `app/(user)/club/[slug]/page.tsx` does this correctly:
 ```ts
-export default async function VenuePage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
+// app/api/clubs/route.ts
+export { listClubs as GET, createClub as POST } from "@/lib/api/clubs/api"
 ```
-Client components read route params via `useParams()` instead (see `events/[id]/page.tsx`).
 
-## Target design (spec — not yet built)
-Read `DB.md` for the full schema (UUID PKs, UTC timestamps, `club_id` denormalized onto `Club_Tables` and `Reservations`). The intended system:
+Shared plumbing is in `lib/api/shared/`:
+- `errors.ts` — the `ApiError` class + factories (`badRequest`, `unauthorized`, `forbidden`, `notFound`, `conflict`, `notImplemented`, …), the `handle()` wrapper (catches thrown `ApiError`s and serializes them to JSON with the right status), `fromDb()` (unwraps a Supabase `{ data, error }`, throwing 500 on error / 404 on null), `readJson()`, `requireFields()`, and `RouteContext<T>` (whose `params` is a `Promise`, per Next 16). Handlers **throw** to signal failure — never hand-build error responses.
+- `auth.ts` — the owner guards, now **implemented** (see Authentication below): `requireOwner()` reads/verifies the session cookie and returns `{ userId, role: "owner" }` or throws `unauthorized`; `requireClubOwner(clubId)` additionally loads the club (service-role client) and throws `forbidden` unless `club.owner_id` matches. Every mutation guards on one of these.
 
-- **Guest checkout, no account.** User submits a reservation request → `pending`.
-- **Owner reviews** → accept sets `confirmed` and generates a `qr_code_token` (UUID); decline sets `cancelled`.
-- **Guest sees the QR** on a confirmation page and screenshots it.
-- **Bouncer scans** at `/admin/scanner` → `checked_in`.
-- **Owner onboarding** via a superadmin-generated one-time token, delivered out-of-band. `Owner_Verification_Tokens` stores only a `token_hash` — no owner association. The register page already collects a 12-character token in step 1.
-- **Pricing** is fixed per table via `Club_Tables.minimum_spend`; no per-event overrides.
-- **Discount codes** are per-club; applied at checkout when the table's `minimum_spend` meets the code's `min_order_value`.
-- **Backend** is intended to be Supabase (PostgreSQL + PostGIS for distance filtering, Realtime for live floorplan status) with Supabase Auth for owners/managers only.
+### Authentication
 
-None of `/admin/scanner`, QR generation, discount codes, distance filtering, or auth exists yet.
+Auth is **custom credentials**, not Supabase Auth: `users.password_hash` is a bcrypt hash (`bcryptjs`, now a runtime dependency). **Only `role === "owner"` can log in** — `admin`/non-owner and suspended accounts are rejected.
 
-As each of these ships, delete it from this section and describe the real implementation in the body above.
+- **Session:** a signed JWT (`jose`, HS256, 7-day expiry) in an `HttpOnly` cookie named `otus_session`, keyed by `AUTH_SECRET` (required env var, in `.env.local`). The cookie contract lives in **`lib/api/auth/session.ts`** (`createSession`, `verifySession`, `SESSION_COOKIE`, `sessionCookieOptions`) — nothing else touches JWTs directly.
+- **Endpoints** (`lib/api/auth/api.ts`, thin routes under `app/api/auth/`): `POST /api/auth/login` (`readJson` → verify email+password → set cookie → return the safe user fields, never `password_hash`; generic 401 for missing user / bad password / non-owner, 403 for suspended) and `POST /api/auth/logout` (clears the cookie). `redeemVerificationToken` (register) is still a `notImplemented` stub.
+- **Reads use the service-role client** (`lib/supabase-admin.ts`, `supabaseAdmin`) because RLS hides the `users` table from the anon key and `password_hash` must never be exposed through it. Import it **server-side only**.
+- **Route protection:** `proxy.ts` at the repo root (Next 16 renamed `middleware` → `proxy`; it defaults to the Node.js runtime) verifies the cookie and redirects anonymous users to `/auth/login`. Its `matcher` covers the `(owner)` routes — `/dashboard`, `/reservations/*`, `/discounts/*`, `/owner-events/*`, and the owner-only `/club/details` + `/club/layout` (NOT `/club/[slug]`, which is a public `(user)` page).
+- **Login UI:** `app/auth/login/page.tsx` POSTs to `/api/auth/login` and on success `router.push("/dashboard")`.
+
+Handler modules: `clubs`, `reservations`, `users`, `onboarding` (verification tokens), `finance`, `auth`. **Cross-tenant reads are implemented** against Supabase; selects deliberately omit `password_hash` (users) and `token_hash` (tokens). **Owner login/logout are implemented** (see Authentication above). Other **mutations are still stubbed** — they call `requireOwner()`/`requireClubOwner()` (now real guards) then throw `notImplemented`, awaiting the business logic. Finance is fully stubbed because no payments/PayMongo table exists in `DB.md` yet (the numbers live only as `mock-data.ts` aggregates). Note the DB-typed client narrows enum columns to string-literal unions, so `.eq("status", value)` on a filter needs a cast to that union.
+
+## Domain Context
+
+This is the Superadmin (God-Mode) portal for Otus — a Cebu nightclub reservation platform. It is a **separate repository** from the B2C/B2B consumer app but reads and writes the **same Supabase database**. Expect to need `SUPABASE_SERVICE_ROLE_KEY` to bypass RLS for cross-tenant reads.
+
+Three workflows define what this portal is for:
+
+1. **B2B white-glove onboarding.** Venue owners cannot self-serve signup. A superadmin creates the club record, then generates a secure one-time token tied to that club. The token is handed to the venue manager out-of-band; they redeem it on the Owner Portal (in the main app) to create their authenticated account. This exists to prevent fraud and to guarantee the owner is linked to the correct venue.
+
+2. **Global reservation ledger.** A master view of every booking across every club, searchable by guest email, phone, or `qr_code_token`. Guest identity is denormalized onto the reservation row (`guest_name`, `guest_email`, `guest_contact`) specifically so bookings work for walk-ins and guests without accounts — do not assume a reservation joins to a user.
+
+3. **Financial reconciliation.** Track total PayMongo volume, compute the Otus platform commission, and surface the pending payout balance owed to each club.
+
+### Schema
+
+`DB.md` is the schema reference. Note two conventions that will bite you: primary keys are UUID v4, and `club_id` is **intentionally denormalized** onto both `Club_Tables` and `Reservations` to avoid joins on hot queries. All timestamps are UTC; convert at the application layer.
+
+✅ **Naming conflict resolved.** `DB.md` is the source of truth. Tables are `Clubs`, `Users`, `Owner_Verification_Tokens` (PascalCase). `Users.role` accepts `owner` or `admin` only — guests have no accounts.
