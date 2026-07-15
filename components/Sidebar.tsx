@@ -96,14 +96,6 @@ const eventsNavigation: NavigationType[] = [
   }
 ]
 
-const discountsNavigation: NavigationType[] = [
-  {
-    name: 'Discount Codes',
-    href: '/discounts',
-    icon: Tag,
-  }
-]
-
 export interface SidebarUser {
   name: string;
   email: string;
