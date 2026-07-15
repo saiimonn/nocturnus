@@ -56,13 +56,11 @@ export function makeClub(ownerId: string): Tables["clubs"]["Insert"] {
     address: faker.location.streetAddress({ useFullAddress: true }),
     operating_hours: operatingHours(),
     cover_image_url: faker.image.url(),
-    // `draft` is a valid runtime status but the generated DB types are stale
-    // until the migration is applied and regenerated — cast to the current union.
     status: faker.helpers.weightedArrayElement([
       { value: "active", weight: 8 },
       { value: "draft", weight: 1 },
       { value: "inactive", weight: 1 },
-    ]) as "active" | "inactive",
+    ]),
     created_at: ts,
     updated_at: ts,
   }

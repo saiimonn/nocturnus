@@ -74,7 +74,7 @@ export interface Database {
           address: string
           operating_hours: { day: string; open: string; close: string }[] | null
           cover_image_url: string | null
-          status: "active" | "inactive"
+          status: "draft" | "active" | "inactive"
           created_at: string
           updated_at: string
         }
@@ -87,7 +87,7 @@ export interface Database {
           address: string
           operating_hours?: { day: string; open: string; close: string }[] | null
           cover_image_url?: string | null
-          status?: "active" | "inactive"
+          status?: "draft" | "active" | "inactive"
           created_at?: string
           updated_at?: string
         }
@@ -100,7 +100,7 @@ export interface Database {
           address?: string
           operating_hours?: { day: string; open: string; close: string }[] | null
           cover_image_url?: string | null
-          status?: "active" | "inactive"
+          status?: "draft" | "active" | "inactive"
           created_at?: string
           updated_at?: string
         }
