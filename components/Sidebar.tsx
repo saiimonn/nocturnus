@@ -34,7 +34,6 @@ import {
   MartiniIcon,
   Book,
   Clipboard,
-  Tag,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React from 'react';
@@ -92,7 +91,7 @@ const bookingNavigation: NavigationType[] = [
 const eventsNavigation: NavigationType[] = [
   {
     name: 'Events/Promos',
-    href: '/events',
+    href: '/owner-events',
     icon: Clipboard,
   }
 ]
@@ -223,7 +222,6 @@ const AdminSidebar = ({ user }: { user: SidebarUser }) => {
               {renderNavigationGroup(customizationNavigation)}
               {renderNavigationGroup(bookingNavigation)}
               {renderNavigationGroup(eventsNavigation)}
-              {renderNavigationGroup(discountsNavigation)}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

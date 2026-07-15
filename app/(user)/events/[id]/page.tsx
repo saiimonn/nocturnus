@@ -1,27 +1,54 @@
-'use client'
-
 import React from "react"
 import Image from "next/image"
-import { useParams } from "next/navigation"
+import { notFound } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Calendar, MapPin, ArrowRight, Bookmark } from "lucide-react"
-import { getEventById, getVenueByClubId } from "@/lib/mock-data-user"
 import { formatEventDate } from "@/lib/utils"
+import { supabase } from "@/lib/supabase"
 
+interface EventDetailPageProps {
+  params: Promise<{ id: string }>
+}
 
-export default function EventDetailPage() {
-  const params = useParams()
-  const eventId = params.id as string
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-  const currentEvent = getEventById(eventId)
-  const venue = currentEvent ? getVenueByClubId(currentEvent.club_id) : null
+export default async function EventDetailPage({ params }: EventDetailPageProps) {
+  const { id } = await params
 
-  if (!currentEvent || !venue) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <p className="text-zinc-500">Event not found.</p>
-      </div>
-    )
+  // 1. Edge Case: Prevent Postgres errors on invalid UUID paths
+  if (!UUID_REGEX.test(id)) {
+    notFound()
+  }
+
+  // 2. Fetch event directly from Supabase
+  const { data: currentEvent, error: eventError } = await supabase
+    .from("events")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (eventError) {
+    console.error("Error fetching event:", eventError)
+    throw new Error("Failed to load event details.")
+  }
+
+  // 3. Graceful 404 handling using Next.js conventions
+  if (!currentEvent) {
+    notFound()
+  }
+
+  // 4. Fetch venue (club) directly from Supabase
+  let venue = { name: "Otus Venue", address: "Details loading..." }
+  const { data: club, error: clubError } = await supabase
+    .from("clubs")
+    .select("name, address")
+    .eq("id", currentEvent.club_id)
+    .maybeSingle()
+
+  if (clubError) {
+    console.error("Error fetching club details:", clubError)
+  } else if (club) {
+    venue = club
   }
 
   return (
@@ -31,13 +58,13 @@ export default function EventDetailPage() {
         {currentEvent.image_url && (
           <Image
             src={currentEvent.image_url}
-            alt={currentEvent.title}
+            alt={currentEvent.title || "Event Image"}
             fill
             priority
             className="object-cover select-none"
           />
         )}
-        <div className="absolute inset-0 bg-linear-to-t from-black via-black/40 to-black/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/10" />
 
         <div className="absolute bottom-0 left-0 w-full px-8 pb-8 md:px-16">
           <p className="text-[11px] uppercase tracking-widest text-gray-400">
@@ -75,7 +102,7 @@ export default function EventDetailPage() {
                   Schedule
                 </p>
                 <p className="text-sm font-semibold text-zinc-200">
-                  {formatEventDate(currentEvent.event_date)}
+                  {currentEvent.event_date ? formatEventDate(currentEvent.event_date) : "Date TBA"}
                 </p>
               </div>
             </div>
@@ -123,11 +150,11 @@ export default function EventDetailPage() {
                     <p className="text-[10px] text-zinc-500 uppercase tracking-widest">
                       {venue.address}
                     </p>
-                  <div className="flex justify-between items-end mt-6">
-                    <p className="text-xs text-zinc-400">
-             1         Select a table from the floor plan to get started.
-                    </p>
-                  </div>
+                    <div className="flex justify-between items-end mt-6">
+                      <p className="text-xs text-zinc-400">
+                        Select a table from the floor plan to get started.
+                      </p>
+                    </div>
                   </div>  
                   <div className="flex items-center">
                     <Button

@@ -81,20 +81,6 @@ export interface Event {
   updated_at: string
 }
 
-export interface DiscountCode {
-  id: string
-  club_id: string
-  code: string
-  discount_type: "percentage" | "fixed_amount"
-  discount_value: number
-  start_date: string
-  end_date: string
-  usage_limit: number
-  times_used: number
-  is_active: boolean
-  min_order_value: number
-}
-
 export interface Reservation {
   id: string
   table_id: string

@@ -241,48 +241,6 @@ export interface Database {
         }
         Relationships: []
       }
-      discount_codes: {
-        Row: {
-          id: string
-          club_id: string
-          code: string
-          discount_type: "percentage" | "fixed_amount"
-          discount_value: number
-          start_date: string
-          end_date: string
-          usage_limit: number
-          times_used: number
-          is_active: boolean
-          min_order_value: number
-        }
-        Insert: {
-          id?: string
-          club_id: string
-          code: string
-          discount_type: "percentage" | "fixed_amount"
-          discount_value: number
-          start_date: string
-          end_date: string
-          usage_limit: number
-          times_used?: number
-          is_active?: boolean
-          min_order_value: number
-        }
-        Update: {
-          id?: string
-          club_id?: string
-          code?: string
-          discount_type?: "percentage" | "fixed_amount"
-          discount_value?: number
-          start_date?: string
-          end_date?: string
-          usage_limit?: number
-          times_used?: number
-          is_active?: boolean
-          min_order_value?: number
-        }
-        Relationships: []
-      }
       reservations: {
         Row: {
           id: string
