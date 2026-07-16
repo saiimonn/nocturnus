@@ -190,7 +190,7 @@ const AdminSidebar = ({ user }: { user: SidebarUser }) => {
 
             {/* This section hides in collapsed icon mode */}
             <div className="grid flex-1 text-left group-data-[collapsible=icon]:hidden">
-              <span className="truncate text-xs font-semibold">Nocturnus</span>
+              <span className="truncate text-xs font-semibold">Otus</span>
               <span className="text-sidebar-foreground/70 truncate text-xs">
                 Club Owner Dashboard
               </span>
