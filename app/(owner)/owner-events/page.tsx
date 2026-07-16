@@ -14,7 +14,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
-import { events as initialEvents } from "@/lib/mock-data-owner";
 import type { Event } from "@/lib/types";
 
 const statusStyles: Record<Event["status"], string> = {
@@ -24,7 +23,11 @@ const statusStyles: Record<Event["status"], string> = {
 };
 
 export default function EventsPage() {
-  const [events, setEvents] = useState<Event[]>(initialEvents);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [clubId, setClubId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -57,15 +60,28 @@ export default function EventsPage() {
 
   const findEvent = (id: string) => events.find((e) => e.id === id) ?? null;
 
-  const handleDeleteEvent = (id: string) => {
+  const handleDeleteEvent = async (id: string) => {
+    if (!clubId) return;
     if (!window.confirm("Delete this event? This action cannot be undone.")) {
       return;
     }
-    setEvents((prev) => prev.filter((e) => e.id !== id));
-    if (activeId === id) setActiveId(null);
-    if (editId === id) {
-      setIsEditOpen(false);
-      setEditId(null);
+    try {
+      const response = await fetch(
+        `/api/owner/clubs/${clubId}/events/${id}`,
+        { method: "DELETE" },
+      );
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+      setEvents((prev) => prev.filter((e) => e.id !== id));
+      if (activeId === id) setActiveId(null);
+      if (editId === id) {
+        setIsEditOpen(false);
+        setEditId(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete event:", error);
+      window.alert("Failed to delete the event. Please try again.");
     }
   };
 
@@ -79,26 +95,40 @@ export default function EventsPage() {
     setNewImageObjectUrl(null);
   };
 
-  const handleAddEvent = () => {
+  const handleAddEvent = async () => {
+    if (!clubId) return;
     if (!newTitle.trim() || !newDate.trim() || !newDescription.trim()) return;
 
-    const image = newImageObjectUrl ?? (newImageUrl.trim() || null);
+    // Object URLs are browser-only blobs and cannot be persisted; only a real
+    // (pasted) URL is stored. Uploading files needs a storage bucket (not wired).
+    const image = newImageUrl.trim() || null;
 
-    const nextEvent: Event = {
-      id: crypto.randomUUID(),
-      club_id: initialEvents[0]?.club_id ?? "",
-      title: newTitle.trim(),
-      description: newDescription.trim(),
-      image_url: image,
-      event_date: new Date(`${newDate}T00:00:00`).toISOString(),
-      status: newStatus,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    setEvents((prev) => [nextEvent, ...prev]);
-    setIsAddOpen(false);
-    resetAddForm();
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/owner/clubs/${clubId}/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newTitle.trim(),
+          description: newDescription.trim(),
+          image_url: image,
+          event_date: new Date(`${newDate}T00:00:00`).toISOString(),
+          status: newStatus,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+      const { event } = (await response.json()) as { event: Event };
+      setEvents((prev) => [event, ...prev]);
+      setIsAddOpen(false);
+      resetAddForm();
+    } catch (error) {
+      console.error("Failed to create event:", error);
+      window.alert("Failed to create the event. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetEditForm = () => {
@@ -125,32 +155,44 @@ export default function EventsPage() {
     setIsEditOpen(true);
   };
 
-  const handleEditSave = () => {
-    if (editId === null) return;
+  const handleEditSave = async () => {
+    if (editId === null || !clubId) return;
     if (!editTitle.trim() || !editDate.trim() || !editDescription.trim())
       return;
 
-    const image = editImageObjectUrl ?? (editImageUrl.trim() || null);
+    // Only a real (pasted) URL is stored; object URLs are browser-only previews.
+    const image = editImageUrl.trim() || null;
 
-    setEvents((prev) =>
-      prev.map((event) =>
-        event.id === editId
-          ? {
-              ...event,
-              title: editTitle.trim(),
-              event_date: new Date(`${editDate}T00:00:00`).toISOString(),
-              status: editStatus,
-              description: editDescription.trim(),
-              image_url: image,
-              updated_at: new Date().toISOString(),
-            }
-          : event,
-      ),
-    );
-
-    setIsEditOpen(false);
-    setEditId(null);
-    resetEditForm();
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(
+        `/api/owner/clubs/${clubId}/events/${editId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: editTitle.trim(),
+            description: editDescription.trim(),
+            image_url: image,
+            event_date: new Date(`${editDate}T00:00:00`).toISOString(),
+            status: editStatus,
+          }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+      const { event } = (await response.json()) as { event: Event };
+      setEvents((prev) => prev.map((e) => (e.id === event.id ? event : e)));
+      setIsEditOpen(false);
+      setEditId(null);
+      resetEditForm();
+    } catch (error) {
+      console.error("Failed to update event:", error);
+      window.alert("Failed to update the event. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleNewImageFileChange = (
@@ -174,6 +216,40 @@ export default function EventsPage() {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadEvents = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        const response = await fetch("/api/owner/events");
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+        const data = (await response.json()) as {
+          clubId: string | null;
+          events: Event[];
+        };
+        if (!cancelled) {
+          setEvents(data.events);
+          setClubId(data.clubId);
+        }
+      } catch (error) {
+        console.error("Failed to load owner events:", error);
+        if (!cancelled) setLoadError("Failed to load events. Please try again.");
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    loadEvents();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     return () => {
       if (newImageObjectUrl) URL.revokeObjectURL(newImageObjectUrl);
       if (editImageObjectUrl) URL.revokeObjectURL(editImageObjectUrl);
@@ -184,11 +260,15 @@ export default function EventsPage() {
   const editImagePreview = editImageObjectUrl ?? (editImageUrl.trim() || null);
 
   const canSubmitNew =
+    !isSubmitting &&
+    clubId !== null &&
     newTitle.trim().length > 0 &&
     newDate.trim().length > 0 &&
     newDescription.trim().length > 0;
 
   const canSubmitEdit =
+    !isSubmitting &&
+    clubId !== null &&
     editTitle.trim().length > 0 &&
     editDate.trim().length > 0 &&
     editDescription.trim().length > 0;
@@ -207,13 +287,28 @@ export default function EventsPage() {
           </p>
         </div>
 
-        <Button onClick={() => setIsAddOpen(true)} className="px-4">
+        <Button
+          onClick={() => setIsAddOpen(true)}
+          className="px-4"
+          disabled={!clubId}
+        >
           <Plus />
           Add Event
         </Button>
       </div>
 
-      {events.length === 0 ? (
+      {isLoading ? (
+        <div className="flex min-h-90 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30">
+          <p className="text-sm text-muted-foreground">Loading events…</p>
+        </div>
+      ) : loadError ? (
+        <div className="flex min-h-90 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-destructive/40 bg-destructive/5">
+          <h3 className="text-xl font-semibold text-foreground">
+            Couldn&apos;t load events
+          </h3>
+          <p className="text-sm text-muted-foreground">{loadError}</p>
+        </div>
+      ) : events.length === 0 ? (
         <div className="flex min-h-90 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30">
           <h3 className="text-xl font-semibold text-foreground">
             No events yet
