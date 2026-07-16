@@ -281,19 +281,43 @@ export const updateClub = handle(
   },
 )
 
+const CLUB_IMAGES_BUCKET = "club-images"
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024
+
 export const addClubImage = handle(
   async (request, context: RouteContext<{ clubId: string }>) => {
     const { clubId } = await context.params
     await requireClubOwner(clubId)
-    const body = await readJson(request)
-    requireFields(body, ["image_url"])
-    const imageUrl = requireNonEmptyString(body.image_url, "image_url")
-    const caption = optionalNullableString(body.caption, "caption") ?? null
+
+    const form = await request.formData()
+    const file = form.get("file")
+    if (!(file instanceof File)) {
+      throw badRequest("file is required")
+    }
+    if (!file.type.startsWith("image/")) {
+      throw badRequest("file must be an image")
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      throw badRequest("file must be smaller than 8MB")
+    }
+    const caption = optionalNullableString(form.get("caption"), "caption") ?? null
+
+    const extension = file.name.includes(".") ? file.name.split(".").pop() : undefined
+    const path = `${clubId}/${crypto.randomUUID()}${extension ? `.${extension}` : ""}`
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from(CLUB_IMAGES_BUCKET)
+      .upload(path, file, { contentType: file.type })
+    if (uploadError) {
+      throw new Error(uploadError.message)
+    }
+    const {
+      data: { publicUrl },
+    } = supabaseAdmin.storage.from(CLUB_IMAGES_BUCKET).getPublicUrl(path)
 
     const image = fromDb(
       await supabaseAdmin
         .from("club_images")
-        .insert({ club_id: clubId, image_url: imageUrl, caption })
+        .insert({ club_id: clubId, image_url: publicUrl, caption })
         .select("*")
         .single(),
     )

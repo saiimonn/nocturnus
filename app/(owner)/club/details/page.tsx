@@ -20,7 +20,8 @@ export default function ClubDetailsPage() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [address, setAddress] = useState("")
-  const [newImageUrl, setNewImageUrl] = useState("")
+  const [newImageFile, setNewImageFile] = useState<File | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -112,7 +113,7 @@ export default function ClubDetailsPage() {
     setName(club?.name ?? "")
     setDescription(club?.description ?? "")
     setAddress(club?.address ?? "")
-    setNewImageUrl("")
+    setNewImageFile(null)
     setIsEditing(false)
   }
 
@@ -140,22 +141,26 @@ export default function ClubDetailsPage() {
   }
 
   const handleAddImage = async () => {
-    if (!club || !newImageUrl.trim()) return
+    if (!club || !newImageFile) return
+    setIsUploadingImage(true)
     try {
+      const formData = new FormData()
+      formData.append("file", newImageFile)
       const response = await fetch(`/api/owner/clubs/${club.id}/images`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image_url: newImageUrl.trim() }),
+        body: formData,
       })
       if (!response.ok) {
         throw new Error(`Request failed with status ${response.status}`)
       }
       const { image } = (await response.json()) as { image: ClubImage }
       setImages((prev) => [...prev, image])
-      setNewImageUrl("")
+      setNewImageFile(null)
     } catch (error) {
       console.error("Failed to add photo:", error)
       window.alert("Failed to add the photo. Please try again.")
+    } finally {
+      setIsUploadingImage(false)
     }
   }
 
@@ -290,18 +295,18 @@ export default function ClubDetailsPage() {
           {isEditing && (
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <Input
-                placeholder="https://example.com/photo.jpg"
-                value={newImageUrl}
-                onChange={(e) => setNewImageUrl(e.target.value)}
+                type="file"
+                accept="image/*"
+                onChange={(e) => setNewImageFile(e.target.files?.[0] ?? null)}
                 className="max-w-md"
               />
               <Button
                 type="button"
                 onClick={handleAddImage}
                 variant="outline"
-                disabled={!newImageUrl.trim()}
+                disabled={!newImageFile || isUploadingImage}
               >
-                Add photo
+                {isUploadingImage ? "Uploading…" : "Add photo"}
               </Button>
             </div>
           )}
