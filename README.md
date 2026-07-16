@@ -1,36 +1,36 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Otus Superadmin Portal
+
+The Superadmin (God-Mode) portal for **Otus**, a Cebu nightclub reservation platform. This is a separate repository from the B2C/B2B consumer app, but it reads and writes the **same Supabase database**.
+
+This portal exists for three core workflows:
+
+1. **B2B white-glove onboarding** — superadmins issue one-time tokens that let venue owners self-register an account and then their own club (owner first, club second).
+2. **Global reservation ledger** — a cross-club view of every booking, searchable by guest email, phone, or QR code token.
+3. **Financial reconciliation** — tracking PayMongo volume, platform commission, and pending payouts per club.
+
+For full architecture, data-layer, auth, and domain details, see [`AGENTS.md`](./AGENTS.md) — it is the single source of truth for how this codebase works and must be kept up to date with every feature change.
+
+## Stack
+
+- **Next.js 16** (App Router) — note this version has breaking API changes vs. older Next; read `node_modules/next/dist/docs/` before writing Next-specific code.
+- **Tailwind v4** (CSS-first config, no `tailwind.config.*`)
+- **shadcn/ui** (`base-vega` style, built on `@base-ui/react`, not Radix)
+- **Supabase** (Postgres + Storage), with a custom credentials auth system (bcrypt + signed JWT session cookie)
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev      # dev server on http://localhost:3000
+npm run build    # production build (also the only full typecheck)
+npm run start    # serve the production build
+npm run lint     # eslint
+npm run seed     # wipe + reseed Supabase tables with faker data (dev DB only)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`npm run seed` requires `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`. See `AGENTS.md` for seeded test accounts and other details.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Documentation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [`AGENTS.md`](./AGENTS.md) — architecture, API conventions, auth, and domain context (read this first)
+- [`DB.md`](./DB.md) — database schema reference
+- [`ROUTES.md`](./ROUTES.md) — route map
