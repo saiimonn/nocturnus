@@ -12,6 +12,7 @@ import {
   type RouteContext,
 } from "@/lib/api/shared/errors"
 import type { Database } from "@/lib/db"
+import { optionalImageFile, requireImageFile, uploadClubMedia } from "@/lib/api/shared/storage"
 
 type ClubUpdate = Database["public"]["Tables"]["clubs"]["Update"]
 type FloorPlanUpdate = Database["public"]["Tables"]["floor_plans"]["Update"]
@@ -243,19 +244,44 @@ export const getOwnerClub = handle(async () => {
 // their club from `draft` to `active` (making it visible to consumers) when they
 // choose to showcase it. Owners may only move between `draft` and `active`;
 // `inactive` is a superadmin-only enforcement state and must be rejected here.
+// Accepts either JSON (text-only edits: name/address/description/status) or
+// multipart form-data (when a cover image file is attached) — both are
+// normalized into the same optional-field body below.
 export const updateClub = handle(
   async (request, context: RouteContext<{ clubId: string }>) => {
     const { clubId } = await context.params
     await requireClubOwner(clubId)
-    const body = await readJson(request)
+    const contentType = request.headers.get("content-type") ?? ""
+    let body: Record<string, unknown>
+    if (contentType.includes("multipart/form-data")) {
+      const form = await request.formData()
+      body = {}
+      for (const field of ["name", "address", "description", "status"] as const) {
+        const value = form.get(field)
+        if (value !== null) body[field] = value
+      }
+      const operatingHours = form.get("operating_hours")
+      if (typeof operatingHours === "string" && operatingHours !== "") {
+        try {
+          body.operating_hours = JSON.parse(operatingHours)
+        } catch {
+          throw badRequest("operating_hours must be valid JSON")
+        }
+      }
+      const coverImage = await optionalImageFile(form, "cover_image")
+      if (coverImage) {
+        body.cover_image_url = await uploadClubMedia(`clubs/${clubId}/cover`, coverImage)
+      }
+    } else {
+      body = await readJson(request)
+    }
 
     const updates: ClubUpdate = { updated_at: new Date().toISOString() }
     if (body.name !== undefined) updates.name = requireNonEmptyString(body.name, "name")
     if (body.address !== undefined) updates.address = requireNonEmptyString(body.address, "address")
     const description = optionalNullableString(body.description, "description")
     if (description !== undefined) updates.description = description
-    const coverImageUrl = optionalNullableString(body.cover_image_url, "cover_image_url")
-    if (coverImageUrl !== undefined) updates.cover_image_url = coverImageUrl
+    if (body.cover_image_url !== undefined) updates.cover_image_url = body.cover_image_url as string
     if (body.operating_hours !== undefined) {
       if (body.operating_hours !== null && !Array.isArray(body.operating_hours)) {
         throw badRequest("operating_hours must be an array or null")
@@ -281,43 +307,20 @@ export const updateClub = handle(
   },
 )
 
-const CLUB_IMAGES_BUCKET = "club-images"
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024
-
 export const addClubImage = handle(
   async (request, context: RouteContext<{ clubId: string }>) => {
     const { clubId } = await context.params
     await requireClubOwner(clubId)
 
     const form = await request.formData()
-    const file = form.get("file")
-    if (!(file instanceof File)) {
-      throw badRequest("file is required")
-    }
-    if (!file.type.startsWith("image/")) {
-      throw badRequest("file must be an image")
-    }
-    if (file.size > MAX_IMAGE_BYTES) {
-      throw badRequest("file must be smaller than 8MB")
-    }
+    const file = await requireImageFile(form, "file")
     const caption = optionalNullableString(form.get("caption"), "caption") ?? null
-
-    const extension = file.name.includes(".") ? file.name.split(".").pop() : undefined
-    const path = `${clubId}/${crypto.randomUUID()}${extension ? `.${extension}` : ""}`
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from(CLUB_IMAGES_BUCKET)
-      .upload(path, file, { contentType: file.type })
-    if (uploadError) {
-      throw new Error(uploadError.message)
-    }
-    const {
-      data: { publicUrl },
-    } = supabaseAdmin.storage.from(CLUB_IMAGES_BUCKET).getPublicUrl(path)
+    const imageUrl = await uploadClubMedia(`clubs/${clubId}/gallery`, file)
 
     const image = fromDb(
       await supabaseAdmin
         .from("club_images")
-        .insert({ club_id: clubId, image_url: publicUrl, caption })
+        .insert({ club_id: clubId, image_url: imageUrl, caption })
         .select("*")
         .single(),
     )
@@ -346,17 +349,29 @@ export const deleteClubImage = handle(
   },
 )
 
+// Floor plans are created lazily by the layout editor: the first save with no
+// existing floor plan hits this endpoint (name defaults to "Main Floor"),
+// every later background-image save hits `updateFloorPlan` instead.
 export const createFloorPlan = handle(
   async (request, context: RouteContext<{ clubId: string }>) => {
     const { clubId } = await context.params
     await requireClubOwner(clubId)
-    const body = await readJson(request)
-    requireFields(body, ["name", "image_url"])
-    const name = requireNonEmptyString(body.name, "name")
-    const imageUrl = requireNonEmptyString(body.image_url, "image_url")
-    if (body.labels !== undefined && body.labels !== null && !Array.isArray(body.labels)) {
-      throw badRequest("labels must be an array or null")
+    const form = await request.formData()
+    const name = requireNonEmptyString(form.get("name"), "name")
+    const file = await requireImageFile(form, "image")
+    const labelsRaw = form.get("labels")
+    let labels: FloorPlanUpdate["labels"] = null
+    if (typeof labelsRaw === "string" && labelsRaw !== "") {
+      try {
+        labels = JSON.parse(labelsRaw)
+      } catch {
+        throw badRequest("labels must be valid JSON")
+      }
+      if (labels !== null && !Array.isArray(labels)) {
+        throw badRequest("labels must be an array or null")
+      }
     }
+    const imageUrl = await uploadClubMedia(`clubs/${clubId}/floor-plans`, file)
 
     const floorPlan = fromDb(
       await supabaseAdmin
@@ -365,7 +380,7 @@ export const createFloorPlan = handle(
           club_id: clubId,
           name,
           image_url: imageUrl,
-          labels: (body.labels as FloorPlanUpdate["labels"]) ?? null,
+          labels,
         })
         .select("*")
         .single(),
@@ -378,16 +393,27 @@ export const updateFloorPlan = handle(
   async (request, context: RouteContext<{ clubId: string; floorPlanId: string }>) => {
     const { clubId, floorPlanId } = await context.params
     await requireClubOwner(clubId)
-    const body = await readJson(request)
+    const form = await request.formData()
 
     const updates: FloorPlanUpdate = { updated_at: new Date().toISOString() }
-    if (body.name !== undefined) updates.name = requireNonEmptyString(body.name, "name")
-    if (body.image_url !== undefined) updates.image_url = requireNonEmptyString(body.image_url, "image_url")
-    if (body.labels !== undefined) {
-      if (body.labels !== null && !Array.isArray(body.labels)) {
-        throw badRequest("labels must be an array or null")
+    const name = form.get("name")
+    if (name !== null) updates.name = requireNonEmptyString(name, "name")
+    const image = await optionalImageFile(form, "image")
+    if (image) updates.image_url = await uploadClubMedia(`clubs/${clubId}/floor-plans`, image)
+    const labelsRaw = form.get("labels")
+    if (labelsRaw !== null) {
+      if (typeof labelsRaw !== "string" || labelsRaw === "") {
+        updates.labels = null
+      } else {
+        try {
+          updates.labels = JSON.parse(labelsRaw)
+        } catch {
+          throw badRequest("labels must be valid JSON")
+        }
+        if (updates.labels !== null && !Array.isArray(updates.labels)) {
+          throw badRequest("labels must be an array or null")
+        }
       }
-      updates.labels = body.labels as FloorPlanUpdate["labels"]
     }
 
     const floorPlan = fromDb(

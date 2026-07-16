@@ -22,6 +22,8 @@ export default function ClubDetailsPage() {
   const [address, setAddress] = useState("")
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null)
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -87,11 +89,24 @@ export default function ClubDetailsPage() {
     }
     setIsSaving(true)
     try {
-      const response = await fetch(`/api/owner/clubs/${club.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, description, address }),
-      })
+      let response: Response
+      if (coverImageFile) {
+        const formData = new FormData()
+        formData.append("name", name)
+        formData.append("description", description)
+        formData.append("address", address)
+        formData.append("cover_image", coverImageFile)
+        response = await fetch(`/api/owner/clubs/${club.id}`, {
+          method: "PATCH",
+          body: formData,
+        })
+      } else {
+        response = await fetch(`/api/owner/clubs/${club.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, description, address }),
+        })
+      }
       if (!response.ok) {
         throw new Error(`Request failed with status ${response.status}`)
       }
@@ -100,6 +115,9 @@ export default function ClubDetailsPage() {
       setName(updated.name)
       setDescription(updated.description ?? "")
       setAddress(updated.address)
+      if (coverImagePreview) URL.revokeObjectURL(coverImagePreview)
+      setCoverImageFile(null)
+      setCoverImagePreview(null)
       setIsEditing(false)
     } catch (error) {
       console.error("Failed to update club:", error)
@@ -109,13 +127,26 @@ export default function ClubDetailsPage() {
     }
   }
 
+  const handleCoverImageChange = (file: File | null) => {
+    if (coverImagePreview) URL.revokeObjectURL(coverImagePreview)
+    setCoverImageFile(file)
+    setCoverImagePreview(file ? URL.createObjectURL(file) : null)
+  }
+
   const handleCancel = () => {
     setName(club?.name ?? "")
     setDescription(club?.description ?? "")
     setAddress(club?.address ?? "")
     setNewImageFile(null)
+    handleCoverImageChange(null)
     setIsEditing(false)
   }
+
+  useEffect(() => {
+    return () => {
+      if (coverImagePreview) URL.revokeObjectURL(coverImagePreview)
+    }
+  }, [coverImagePreview])
 
   const handleToggleStatus = async () => {
     if (!club) return
@@ -213,8 +244,37 @@ export default function ClubDetailsPage() {
     )
   }
 
+  const coverImageSrc = coverImagePreview ?? club.cover_image_url
+
   return (
     <div className="p-4">
+      <div className="relative mb-4 h-72 w-full overflow-hidden rounded-2xl border border-border bg-muted sm:h-96">
+        {coverImageSrc ? (
+          <Image
+            src={coverImageSrc}
+            alt={`${club.name} cover`}
+            fill
+            unoptimized
+            className="object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+            No cover image
+          </div>
+        )}
+        {isEditing && (
+          <label className="absolute bottom-3 right-3 cursor-pointer rounded-md bg-neutral-900/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-900">
+            {coverImageFile ? "Change selected photo" : "Upload cover photo"}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleCoverImageChange(e.target.files?.[0] ?? null)}
+            />
+          </label>
+        )}
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-background/70 p-6 shadow-sm">
         <div className="space-y-2">
           {isEditing ? (

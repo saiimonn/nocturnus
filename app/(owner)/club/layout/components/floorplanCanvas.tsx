@@ -82,13 +82,14 @@ const FloorplanCanvas = () => {
   const [editCategory, setEditCategory] = useState<ClubTable['category']>('regular');
   const [editIsAvailable, setEditIsAvailable] = useState(true);
 
-  const [floorplanImageUrl, setFloorplanImageUrl] = useState('');
+  const [floorplanImageFile, setFloorplanImageFile] = useState<File | null>(null);
+  const [floorplanImagePreview, setFloorplanImagePreview] = useState<string | null>(null);
   const [isSavingFloorplanImage, setIsSavingFloorplanImage] = useState(false);
 
   const transformerRef = useRef<Konva.Transformer | null>(null);
   const tableRefs = useRef<Record<string, Konva.Group | null>>({});
 
-  const [image] = useImage(floorPlan?.image_url ?? '');
+  const [image] = useImage(floorplanImagePreview ?? floorPlan?.image_url ?? '');
 
   useEffect(() => {
     let cancelled = false;
@@ -114,7 +115,6 @@ const FloorplanCanvas = () => {
         if (cancelled) return;
         const primaryFloorPlan = floorPlans[0] ?? null;
         setFloorPlan(primaryFloorPlan);
-        setFloorplanImageUrl(primaryFloorPlan?.image_url ?? '');
 
         if (primaryFloorPlan) {
           const tablesResponse = await fetch(
@@ -149,18 +149,32 @@ const FloorplanCanvas = () => {
     };
   }, []);
 
+  const handleFloorplanImageFileChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0] ?? null;
+    if (floorplanImagePreview) URL.revokeObjectURL(floorplanImagePreview);
+    setFloorplanImageFile(file);
+    setFloorplanImagePreview(file ? URL.createObjectURL(file) : null);
+    event.target.value = '';
+  };
+
+  useEffect(() => {
+    return () => {
+      if (floorplanImagePreview) URL.revokeObjectURL(floorplanImagePreview);
+    };
+  }, [floorplanImagePreview]);
+
   const handleSaveFloorplanImage = async () => {
-    if (!club || !floorplanImageUrl.trim()) return;
+    if (!club || !floorplanImageFile) return;
     setIsSavingFloorplanImage(true);
     try {
+      const formData = new FormData();
+      formData.append('image', floorplanImageFile);
       if (floorPlan) {
         const response = await fetch(
           `/api/owner/clubs/${club.id}/floor-plans/${floorPlan.id}`,
-          {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image_url: floorplanImageUrl.trim() }),
-          },
+          { method: 'PATCH', body: formData },
         );
         if (!response.ok) {
           throw new Error(`Request failed with status ${response.status}`);
@@ -168,13 +182,10 @@ const FloorplanCanvas = () => {
         const { floorPlan: updated } = (await response.json()) as { floorPlan: FloorPlan };
         setFloorPlan(updated);
       } else {
+        formData.append('name', DEFAULT_FLOOR_PLAN_NAME);
         const response = await fetch(`/api/owner/clubs/${club.id}/floor-plans`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: DEFAULT_FLOOR_PLAN_NAME,
-            image_url: floorplanImageUrl.trim(),
-          }),
+          body: formData,
         });
         if (!response.ok) {
           throw new Error(`Request failed with status ${response.status}`);
@@ -182,6 +193,9 @@ const FloorplanCanvas = () => {
         const { floorPlan: created } = (await response.json()) as { floorPlan: FloorPlan };
         setFloorPlan(created);
       }
+      if (floorplanImagePreview) URL.revokeObjectURL(floorplanImagePreview);
+      setFloorplanImageFile(null);
+      setFloorplanImagePreview(null);
     } catch (error) {
       console.error('Failed to save floorplan image:', error);
       window.alert('Failed to save the floorplan image. Please try again.');
@@ -546,18 +560,18 @@ const FloorplanCanvas = () => {
         <div className="flex h-150 w-200 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 p-6 text-center">
           <div className="text-base font-semibold text-foreground">Set your floorplan image</div>
           <div className="text-sm text-muted-foreground">
-            Paste an image URL to start placing tables.
+            Upload an image to start placing tables.
           </div>
           <div className="flex w-full max-w-md flex-col gap-2 sm:flex-row sm:items-center">
             <Input
-              placeholder="https://example.com/floorplan.jpg"
-              value={floorplanImageUrl}
-              onChange={(e) => setFloorplanImageUrl(e.target.value)}
+              type="file"
+              accept="image/*"
+              onChange={handleFloorplanImageFileChange}
             />
             <Button
               type="button"
               onClick={handleSaveFloorplanImage}
-              disabled={!floorplanImageUrl.trim() || isSavingFloorplanImage}
+              disabled={!floorplanImageFile || isSavingFloorplanImage}
             >
               Save
             </Button>
@@ -567,19 +581,15 @@ const FloorplanCanvas = () => {
         <>
           <div className="mb-3 flex w-full max-w-200 flex-col gap-2 sm:flex-row sm:items-center">
             <Input
-              placeholder="https://example.com/floorplan.jpg"
-              value={floorplanImageUrl}
-              onChange={(e) => setFloorplanImageUrl(e.target.value)}
+              type="file"
+              accept="image/*"
+              onChange={handleFloorplanImageFileChange}
             />
             <Button
               type="button"
               variant="outline"
               onClick={handleSaveFloorplanImage}
-              disabled={
-                !floorplanImageUrl.trim() ||
-                floorplanImageUrl.trim() === floorPlan.image_url ||
-                isSavingFloorplanImage
-              }
+              disabled={!floorplanImageFile || isSavingFloorplanImage}
             >
               Update image
             </Button>
