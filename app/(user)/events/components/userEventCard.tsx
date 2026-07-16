@@ -1,15 +1,14 @@
 import Link from "next/link"
-import type { Event } from "@/lib/mock-data-user"
-import { getVenueByClubId } from "@/lib/mock-data-user"
+import type { Event, Club } from "@/lib/types"
 import { formatEventDate } from "@/lib/utils"
 
 interface EventCardProps {
   event: Event
   status: string
+  venue: Club | null
 }
 
-export default function EventCard({ event, status }: EventCardProps) {
-  const venue = getVenueByClubId(event.club_id)
+export default function EventCard({ event, status, venue }: EventCardProps) {
 
   return (
     <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#1a1a1a] bg-[#111111] transition-transform duration-300 hover:-translate-y-0.5">

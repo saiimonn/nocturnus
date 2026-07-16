@@ -17,7 +17,7 @@ export interface Club {
   slug: string
   description: string | null
   address: string
-  operating_hours: OperatingHours | null
+  operating_hours: OperatingHours[] | null
   cover_image_url: string | null
   created_at: string
   updated_at: string
