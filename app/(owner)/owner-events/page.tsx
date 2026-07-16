@@ -37,7 +37,7 @@ export default function EventsPage() {
   const [newDate, setNewDate] = useState("");
   const [newStatus, setNewStatus] = useState<Event["status"]>("draft");
   const [newDescription, setNewDescription] = useState("");
-  const [newImageUrl, setNewImageUrl] = useState("");
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [newImageObjectUrl, setNewImageObjectUrl] = useState<string | null>(
     null,
   );
@@ -46,7 +46,7 @@ export default function EventsPage() {
   const [editDate, setEditDate] = useState("");
   const [editStatus, setEditStatus] = useState<Event["status"]>("draft");
   const [editDescription, setEditDescription] = useState("");
-  const [editImageUrl, setEditImageUrl] = useState("");
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImageObjectUrl, setEditImageObjectUrl] = useState<string | null>(
     null,
   );
@@ -90,7 +90,7 @@ export default function EventsPage() {
     setNewDate("");
     setNewStatus("draft");
     setNewDescription("");
-    setNewImageUrl("");
+    setNewImageFile(null);
     if (newImageObjectUrl) URL.revokeObjectURL(newImageObjectUrl);
     setNewImageObjectUrl(null);
   };
@@ -99,22 +99,21 @@ export default function EventsPage() {
     if (!clubId) return;
     if (!newTitle.trim() || !newDate.trim() || !newDescription.trim()) return;
 
-    // Object URLs are browser-only blobs and cannot be persisted; only a real
-    // (pasted) URL is stored. Uploading files needs a storage bucket (not wired).
-    const image = newImageUrl.trim() || null;
-
     setIsSubmitting(true);
     try {
+      const formData = new FormData();
+      formData.append("title", newTitle.trim());
+      formData.append("description", newDescription.trim());
+      formData.append(
+        "event_date",
+        new Date(`${newDate}T00:00:00`).toISOString(),
+      );
+      formData.append("status", newStatus);
+      if (newImageFile) formData.append("image", newImageFile);
+
       const response = await fetch(`/api/owner/clubs/${clubId}/events`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: newTitle.trim(),
-          description: newDescription.trim(),
-          image_url: image,
-          event_date: new Date(`${newDate}T00:00:00`).toISOString(),
-          status: newStatus,
-        }),
+        body: formData,
       });
       if (!response.ok) {
         throw new Error(`Request failed with status ${response.status}`);
@@ -136,7 +135,7 @@ export default function EventsPage() {
     setEditDate("");
     setEditStatus("draft");
     setEditDescription("");
-    setEditImageUrl("");
+    setEditImageFile(null);
     if (editImageObjectUrl) URL.revokeObjectURL(editImageObjectUrl);
     setEditImageObjectUrl(null);
   };
@@ -149,9 +148,9 @@ export default function EventsPage() {
     setEditDate(event.event_date.slice(0, 10));
     setEditStatus(event.status);
     setEditDescription(event.description ?? "");
-    setEditImageUrl(event.image_url ?? "");
+    setEditImageFile(null);
     if (editImageObjectUrl) URL.revokeObjectURL(editImageObjectUrl);
-    setEditImageObjectUrl(null);
+    setEditImageObjectUrl(event.image_url ?? null);
     setIsEditOpen(true);
   };
 
@@ -160,24 +159,21 @@ export default function EventsPage() {
     if (!editTitle.trim() || !editDate.trim() || !editDescription.trim())
       return;
 
-    // Only a real (pasted) URL is stored; object URLs are browser-only previews.
-    const image = editImageUrl.trim() || null;
-
     setIsSubmitting(true);
     try {
+      const formData = new FormData();
+      formData.append("title", editTitle.trim());
+      formData.append("description", editDescription.trim());
+      formData.append(
+        "event_date",
+        new Date(`${editDate}T00:00:00`).toISOString(),
+      );
+      formData.append("status", editStatus);
+      if (editImageFile) formData.append("image", editImageFile);
+
       const response = await fetch(
         `/api/owner/clubs/${clubId}/events/${editId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: editTitle.trim(),
-            description: editDescription.trim(),
-            image_url: image,
-            event_date: new Date(`${editDate}T00:00:00`).toISOString(),
-            status: editStatus,
-          }),
-        },
+        { method: "PATCH", body: formData },
       );
       if (!response.ok) {
         throw new Error(`Request failed with status ${response.status}`);
@@ -201,6 +197,7 @@ export default function EventsPage() {
     const file = event.target.files?.[0];
     if (!file) return;
     if (newImageObjectUrl) URL.revokeObjectURL(newImageObjectUrl);
+    setNewImageFile(file);
     setNewImageObjectUrl(URL.createObjectURL(file));
     event.target.value = "";
   };
@@ -211,6 +208,7 @@ export default function EventsPage() {
     const file = event.target.files?.[0];
     if (!file) return;
     if (editImageObjectUrl) URL.revokeObjectURL(editImageObjectUrl);
+    setEditImageFile(file);
     setEditImageObjectUrl(URL.createObjectURL(file));
     event.target.value = "";
   };
@@ -256,8 +254,8 @@ export default function EventsPage() {
     };
   }, [newImageObjectUrl, editImageObjectUrl]);
 
-  const newImagePreview = newImageObjectUrl ?? (newImageUrl.trim() || null);
-  const editImagePreview = editImageObjectUrl ?? (editImageUrl.trim() || null);
+  const newImagePreview = newImageObjectUrl;
+  const editImagePreview = editImageObjectUrl;
 
   const canSubmitNew =
     !isSubmitting &&
@@ -511,14 +509,6 @@ export default function EventsPage() {
                 accept="image/*"
                 onChange={handleNewImageFileChange}
               />
-              <Input
-                placeholder="https://example.com/banner.jpg"
-                value={newImageUrl}
-                onChange={(event) => setNewImageUrl(event.target.value)}
-              />
-              <span className="text-xs text-muted-foreground">
-                Upload a file or paste an image URL.
-              </span>
               {newImagePreview && (
                 <div className="relative h-24 w-24 overflow-hidden rounded-md border border-border">
                   <Image
@@ -527,14 +517,15 @@ export default function EventsPage() {
                     width={96}
                     height={96}
                     className="h-full w-full object-cover"
+                    unoptimized
                   />
                   <button
                     type="button"
                     className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[10px] text-white"
                     onClick={() => {
                       if (newImageObjectUrl) URL.revokeObjectURL(newImageObjectUrl);
+                      setNewImageFile(null);
                       setNewImageObjectUrl(null);
-                      setNewImageUrl("");
                     }}
                   >
                     ×
@@ -640,14 +631,6 @@ export default function EventsPage() {
                 accept="image/*"
                 onChange={handleEditImageFileChange}
               />
-              <Input
-                placeholder="https://example.com/banner.jpg"
-                value={editImageUrl}
-                onChange={(event) => setEditImageUrl(event.target.value)}
-              />
-              <span className="text-xs text-muted-foreground">
-                Upload a file or paste an image URL.
-              </span>
               {editImagePreview && (
                 <div className="relative h-24 w-24 overflow-hidden rounded-md border border-border">
                   <Image
@@ -656,14 +639,15 @@ export default function EventsPage() {
                     width={96}
                     height={96}
                     className="h-full w-full object-cover"
+                    unoptimized
                   />
                   <button
                     type="button"
                     className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[10px] text-white"
                     onClick={() => {
                       if (editImageObjectUrl) URL.revokeObjectURL(editImageObjectUrl);
+                      setEditImageFile(null);
                       setEditImageObjectUrl(null);
-                      setEditImageUrl("");
                     }}
                   >
                     ×

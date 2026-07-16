@@ -6,11 +6,11 @@ import {
   fromDb,
   handle,
   notFound,
-  readJson,
   requireFields,
   type RouteContext,
 } from "@/lib/api/shared/errors"
 import type { Database } from "@/lib/db"
+import { optionalImageFile, uploadClubMedia } from "@/lib/api/shared/storage"
 
 type EventUpdate = Database["public"]["Tables"]["events"]["Update"]
 const EVENT_STATUSES = ["draft", "published", "cancelled"] as const
@@ -75,7 +75,13 @@ export const createEvent = handle(
   async (request, context: RouteContext<{ clubId: string }>) => {
     const { clubId } = await context.params
     await requireClubOwner(clubId)
-    const body = await readJson(request)
+    const form = await request.formData()
+    const body: Record<string, unknown> = {
+      title: form.get("title"),
+      event_date: form.get("event_date"),
+      status: form.get("status"),
+      description: form.get("description"),
+    }
     requireFields(body, ["title", "event_date", "status"])
     if (typeof body.title !== "string" || body.title.trim() === "") {
       throw badRequest("title must be a non-empty string")
@@ -83,6 +89,9 @@ export const createEvent = handle(
     if (typeof body.event_date !== "string") {
       throw badRequest("event_date must be an ISO date string")
     }
+    const image = await optionalImageFile(form, "image")
+    const imageUrl = image ? await uploadClubMedia(`clubs/${clubId}/events`, image) : null
+
     const event = fromDb(
       await supabaseAdmin
         .from("events")
@@ -90,7 +99,7 @@ export const createEvent = handle(
           club_id: clubId,
           title: body.title.trim(),
           description: optionalNullableString(body.description, "description") ?? null,
-          image_url: optionalNullableString(body.image_url, "image_url") ?? null,
+          image_url: imageUrl,
           event_date: body.event_date,
           status: parseStatus(body.status),
         })
@@ -105,26 +114,34 @@ export const updateEvent = handle(
   async (request, context: RouteContext<{ clubId: string; eventId: string }>) => {
     const { clubId, eventId } = await context.params
     await requireClubOwner(clubId)
-    const body = await readJson(request)
+    const form = await request.formData()
 
     const updates: EventUpdate = { updated_at: new Date().toISOString() }
-    if (body.title !== undefined) {
-      if (typeof body.title !== "string" || body.title.trim() === "") {
+    const title = form.get("title")
+    if (title !== null) {
+      if (typeof title !== "string" || title.trim() === "") {
         throw badRequest("title must be a non-empty string")
       }
-      updates.title = body.title.trim()
+      updates.title = title.trim()
     }
-    if (body.event_date !== undefined) {
-      if (typeof body.event_date !== "string") {
+    const eventDate = form.get("event_date")
+    if (eventDate !== null) {
+      if (typeof eventDate !== "string") {
         throw badRequest("event_date must be an ISO date string")
       }
-      updates.event_date = body.event_date
+      updates.event_date = eventDate
     }
-    if (body.status !== undefined) updates.status = parseStatus(body.status)
-    const description = optionalNullableString(body.description, "description")
-    if (description !== undefined) updates.description = description
-    const imageUrl = optionalNullableString(body.image_url, "image_url")
-    if (imageUrl !== undefined) updates.image_url = imageUrl
+    const status = form.get("status")
+    if (status !== null) updates.status = parseStatus(status)
+    // `form.has` (not `!== null`), because FormData can't distinguish "field
+    // omitted" from "field explicitly empty" the way a JSON body's
+    // undefined/null can — an empty description is stored as null.
+    if (form.has("description")) {
+      const description = form.get("description")
+      updates.description = optionalNullableString(description === "" ? null : description, "description")
+    }
+    const image = await optionalImageFile(form, "image")
+    if (image) updates.image_url = await uploadClubMedia(`clubs/${clubId}/events`, image)
 
     // Scope by club_id too, so an owner can only touch events on their own club.
     const event = fromDb(
