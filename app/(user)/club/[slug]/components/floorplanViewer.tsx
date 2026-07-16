@@ -319,16 +319,24 @@ export function FloorplanFullscreen({
   onClose,
   ...props
 }: FloorplanViewerProps & { open: boolean; onClose: () => void }) {
-  if (!open) return null
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm">
+    <div
+      className={`fixed inset-0 z-[100] flex items-center justify-center transition-opacity duration-300 ${
+        open ? "opacity-100" : "pointer-events-none opacity-0"
+      }`}
+    >
+      <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" onClick={onClose} />
       <button
         onClick={onClose}
         className="absolute right-4 top-4 z-[101] rounded-md border border-white/10 bg-black/60 p-2 text-white/60 backdrop-blur-sm transition-colors hover:text-white"
       >
         <X className="h-5 w-5" />
       </button>
-      <div className="h-[85vh] w-[95vw] max-w-5xl">
+      <div
+        className={`relative z-[101] h-[85vh] w-[95vw] max-w-5xl transition-transform duration-300 ease-out ${
+          open ? "scale-100" : "scale-95"
+        }`}
+      >
         <FloorplanContent {...props} />
       </div>
     </div>
