@@ -1,34 +1,228 @@
 'use client'
 
-import { useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Edit, X } from "lucide-react"
 import Image from "next/image"
-import { club, clubImages } from "@/lib/mock-data-owner"
+import type { Club, ClubImage } from "@/lib/types"
 
 export default function ClubDetailsPage() {
+  const [club, setClub] = useState<Club | null>(null)
+  const [images, setImages] = useState<ClubImage[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
   const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false)
   const [showAllPhotos, setShowAllPhotos] = useState(false)
-  const [description, setDescription] = useState(club.description ?? "")
-  const [address, setAddress] = useState(club.address)
-  const [images, setImages] = useState(clubImages)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
+  const [address, setAddress] = useState("")
+  const [newImageUrl, setNewImageUrl] = useState("")
+
+  useEffect(() => {
+    let cancelled = false
+
+    const load = async () => {
+      setIsLoading(true)
+      setLoadError(null)
+      try {
+        const clubResponse = await fetch("/api/owner/club")
+        if (!clubResponse.ok) {
+          throw new Error(`Request failed with status ${clubResponse.status}`)
+        }
+        const { club: ownerClub } = (await clubResponse.json()) as {
+          club: Club | null
+        }
+        if (cancelled) return
+        setClub(ownerClub)
+        setName(ownerClub?.name ?? "")
+        setDescription(ownerClub?.description ?? "")
+        setAddress(ownerClub?.address ?? "")
+
+        if (ownerClub) {
+          const imagesResponse = await fetch(
+            `/api/clubs/${ownerClub.slug}/images`,
+          )
+          if (!imagesResponse.ok) {
+            throw new Error(`Request failed with status ${imagesResponse.status}`)
+          }
+          const { images: clubImages } = (await imagesResponse.json()) as {
+            images: ClubImage[]
+          }
+          if (!cancelled) setImages(clubImages)
+        }
+      } catch (error) {
+        console.error("Failed to load club:", error)
+        if (!cancelled) setLoadError("Failed to load your club. Please try again.")
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+
+    load()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const photosToShow = showAllPhotos ? images : images.slice(0, 4)
 
-  const memberSince = new Date(club.created_at).toLocaleDateString("en-PH", {
-    month: "long",
-    year: "numeric",
-  })
+  const memberSince = club
+    ? new Date(club.created_at).toLocaleDateString("en-PH", {
+        month: "long",
+        year: "numeric",
+      })
+    : null
+
+  const handleSave = async () => {
+    if (!club) return
+    if (name.trim() === "") {
+      window.alert("Club name cannot be empty.")
+      return
+    }
+    setIsSaving(true)
+    try {
+      const response = await fetch(`/api/owner/clubs/${club.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, description, address }),
+      })
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`)
+      }
+      const { club: updated } = (await response.json()) as { club: Club }
+      setClub(updated)
+      setName(updated.name)
+      setDescription(updated.description ?? "")
+      setAddress(updated.address)
+      setIsEditing(false)
+    } catch (error) {
+      console.error("Failed to update club:", error)
+      window.alert("Failed to save changes. Please try again.")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleCancel = () => {
+    setName(club?.name ?? "")
+    setDescription(club?.description ?? "")
+    setAddress(club?.address ?? "")
+    setNewImageUrl("")
+    setIsEditing(false)
+  }
+
+  const handleToggleStatus = async () => {
+    if (!club) return
+    const nextStatus = club.status === "draft" ? "active" : "draft"
+    setIsTogglingStatus(true)
+    try {
+      const response = await fetch(`/api/owner/clubs/${club.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      })
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`)
+      }
+      const { club: updated } = (await response.json()) as { club: Club }
+      setClub(updated)
+    } catch (error) {
+      console.error("Failed to update club status:", error)
+      window.alert("Failed to update club status. Please try again.")
+    } finally {
+      setIsTogglingStatus(false)
+    }
+  }
+
+  const handleAddImage = async () => {
+    if (!club || !newImageUrl.trim()) return
+    try {
+      const response = await fetch(`/api/owner/clubs/${club.id}/images`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image_url: newImageUrl.trim() }),
+      })
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`)
+      }
+      const { image } = (await response.json()) as { image: ClubImage }
+      setImages((prev) => [...prev, image])
+      setNewImageUrl("")
+    } catch (error) {
+      console.error("Failed to add photo:", error)
+      window.alert("Failed to add the photo. Please try again.")
+    }
+  }
+
+  const handleRemoveImage = async (imageId: string) => {
+    if (!club) return
+    try {
+      const response = await fetch(
+        `/api/owner/clubs/${club.id}/images/${imageId}`,
+        { method: "DELETE" },
+      )
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`)
+      }
+      setImages((prev) => prev.filter((p) => p.id !== imageId))
+    } catch (error) {
+      console.error("Failed to remove photo:", error)
+      window.alert("Failed to remove the photo. Please try again.")
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-90 flex-col items-center justify-center gap-3 p-4">
+        <p className="text-sm text-muted-foreground">Loading your club…</p>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex min-h-90 flex-col items-center justify-center gap-3 p-4 text-center">
+        <h3 className="text-xl font-semibold text-foreground">
+          Couldn&apos;t load your club
+        </h3>
+        <p className="text-sm text-muted-foreground">{loadError}</p>
+      </div>
+    )
+  }
+
+  if (!club) {
+    return (
+      <div className="flex min-h-90 flex-col items-center justify-center gap-3 p-4 text-center">
+        <h3 className="text-xl font-semibold text-foreground">
+          You haven&apos;t registered a club yet
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Set up your club to start managing events and reservations.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="p-4">
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-background/70 p-6 shadow-sm">
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold text-foreground">
-            {club.name}
-          </h1>
+          {isEditing ? (
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="max-w-md text-3xl font-semibold"
+            />
+          ) : (
+            <h1 className="text-3xl font-semibold text-foreground">
+              {club.name}
+            </h1>
+          )}
           <p className="text-sm text-muted-foreground">
             Member since {memberSince}
           </p>
@@ -36,26 +230,29 @@ export default function ClubDetailsPage() {
         <div className="flex flex-wrap gap-2">
           {isEditing ? (
             <>
-              <Button onClick={() => setIsEditing(false)} variant="default">
+              <Button onClick={handleSave} variant="default" disabled={isSaving}>
                 Save
               </Button>
-              <Button
-                onClick={() => {
-                  setDescription(club.description ?? "")
-                  setAddress(club.address)
-                  setImages(clubImages)
-                  setIsEditing(false)
-                }}
-                variant="outline"
-              >
+              <Button onClick={handleCancel} variant="outline" disabled={isSaving}>
                 Cancel
               </Button>
             </>
           ) : (
-            <Button onClick={() => setIsEditing(true)} className="px-4">
-              <Edit />
-              Edit
-            </Button>
+            <>
+              {club.status !== "inactive" && (
+                <Button
+                  onClick={handleToggleStatus}
+                  variant="outline"
+                  disabled={isTogglingStatus}
+                >
+                  {club.status === "draft" ? "Publish club" : "Move to draft"}
+                </Button>
+              )}
+              <Button onClick={() => setIsEditing(true)} className="px-4">
+                <Edit />
+                Edit
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -70,7 +267,7 @@ export default function ClubDetailsPage() {
             rows={4}
           />
         ) : (
-          <p>{description}</p>
+          <p>{description || "No description yet."}</p>
         )}
       </div>
 
@@ -92,32 +289,19 @@ export default function ClubDetailsPage() {
         <div className="flex flex-col gap-3">
           {isEditing && (
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => {
-                  const files = Array.from(e.target.files || [])
-                  if (files.length === 0) return
-                  const newImages = files.map((file, i) => ({
-                    id: `ci-new-${Date.now()}-${i}`,
-                    club_id: club.id,
-                    image_url: URL.createObjectURL(file),
-                    caption: null,
-                    created_at: new Date().toISOString(),
-                  }))
-                  setImages((prev) => [...prev, ...newImages])
-                  if (fileInputRef.current) fileInputRef.current.value = ""
-                }}
-                className="hidden"
+              <Input
+                placeholder="https://example.com/photo.jpg"
+                value={newImageUrl}
+                onChange={(e) => setNewImageUrl(e.target.value)}
+                className="max-w-md"
               />
               <Button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={handleAddImage}
                 variant="outline"
+                disabled={!newImageUrl.trim()}
               >
-                Upload photos
+                Add photo
               </Button>
             </div>
           )}
@@ -134,11 +318,7 @@ export default function ClubDetailsPage() {
                 {isEditing && (
                   <button
                     type="button"
-                    onClick={() =>
-                      setImages((prev) =>
-                        prev.filter((p) => p.id !== img.id)
-                      )
-                    }
+                    onClick={() => handleRemoveImage(img.id)}
                     className="absolute right-1 top-1 rounded-full bg-neutral-900/80 p-1 text-white"
                     aria-label="Remove photo"
                   >
