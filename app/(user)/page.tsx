@@ -4,27 +4,69 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
-import SearchSuggestionsCard from "@/components/searchSuggestionsCard";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, MapIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { supabase } from "@/lib/supabase";
+
+type ClubRow = {
+  id: string;
+  name: string;
+  slug: string;
+  address: string;
+  cover_image_url: string | null;
+};
+
+type TableRow = {
+  club_id: string;
+  is_available: boolean;
+};
 
 export default function Home() {
   const router = useRouter();
   const [searchValue, setSearchValue] = useState("");
-
+  const [venueCards, setVenueCards] = useState<Venue[]>([]);
   const suggestions = useMemo(
-    () => [
-      { label: "CLUB_NAME1", address: "Cebu City" },
-      { label: "CLUB_NAME2", address: "Cebu City" },
-      { label: "CLUB_NAME3", address: "Cebu City" },
-      { label: "CLUB_NAME4", address: "Cebu City" },
-      { label: "CLUB_NAME5", address: "Ayala Center" },
-      { label: "CLUB_NAME6", address: "IT Park" },
-      { label: "CLUB_NAME7", address: "Mango Avenue" },
-    ],
-    []
+    () => venueCards.map((v) => ({ label: v.name, address: v.location })),
+    [venueCards]
   );
+
+  useEffect(() => {
+    async function fetchVenues() {
+      const { data: clubs } = await supabase
+        .from("clubs")
+        .select("id, name, slug, address, cover_image_url")
+        .eq("status", "active")
+        .order("name");
+
+      if (!clubs?.length) return;
+
+      const clubIds = clubs.map((c) => c.id);
+      const { data: tables } = await supabase
+        .from("club_tables")
+        .select("club_id, is_available")
+        .in("club_id", clubIds);
+
+      const availableByClub = new Map<string, number>();
+      for (const t of tables ?? []) {
+        if (t.is_available) {
+          availableByClub.set(t.club_id, (availableByClub.get(t.club_id) ?? 0) + 1);
+        }
+      }
+
+      setVenueCards(
+        clubs.map((club) => ({
+          name: club.name,
+          imageSrc: club.cover_image_url || "/Image.png",
+          imageAlt: `${club.name} venue`,
+          location: club.address,
+          slug: club.slug,
+          tablesLeft: `${availableByClub.get(club.id) ?? 0} Tables Available`,
+        }))
+      );
+    }
+    fetchVenues();
+  }, []);
 
   const matchingSuggestions = useMemo(() => {
     const normalized = searchValue.trim().toLowerCase();
@@ -52,6 +94,7 @@ export default function Home() {
     imageAlt: string;
     location: string;
     tablesLeft: string;
+    slug: string;
   }
 
   interface VenueCarouselProps {
@@ -178,9 +221,10 @@ export default function Home() {
               {venueCards.map((venue, cardIndex) => (
                 <div
                   key={`card-${cardIndex}-${venue.name}`}
-                  className="w-full shrink-0 px-2 md:w-1/2 xl:w-1/3 hover:scale-90 transition-all duration-300 cursor-pointer"
+                  className="w-full shrink-0 px-3 md:w-1/2 xl:w-1/3 hover:scale-[1.02] transition-all duration-300 cursor-pointer"
+                  onClick={() => router.push(`/club/${venue.slug}`)}
                 >
-                  <div className="relative group overflow-hidden rounded-md border border-[#0a0a0a] aspect-4/3 xl:aspect-video">
+                  <div className="relative group overflow-hidden rounded-xl border border-[#0a0a0a] aspect-[3/2]">
                     <Image
                       src={venue.imageSrc}
                       alt={venue.imageAlt}
@@ -189,11 +233,11 @@ export default function Home() {
                     />
                     <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent z-10" />
 
-                    <div className="absolute bottom-4 left-4 z-20 w-full pr-8">
-                      <h3 className="text-2xl font-semibold mb-2 tracking-wide text-white">
+                    <div className="absolute bottom-6 left-6 z-20 w-full pr-8">
+                      <h3 className="text-3xl font-semibold mb-2 tracking-wide text-white">
                         {venue.name}
                       </h3>
-                      <div className="flex items-center text-[11px] text-gray-400 gap-3 font-mono">
+                      <div className="flex items-center text-xs text-gray-400 gap-3 font-mono">
                         <span className="flex items-center gap-1">
                           <MapIcon className="size-3" />
                           {venue.location}
@@ -236,37 +280,6 @@ export default function Home() {
     );
   };
 
-  const venueCards: Venue[] = [
-    {
-      name: "ICON",
-      imageSrc: "/Image.png",
-      imageAlt: "ICON venue",
-      location: "Mabolo",
-      tablesLeft: "4 Tables Left",
-    },
-    {
-      name: "OASIS",
-      imageSrc: "/image4.jpg",
-      imageAlt: "OASIS venue",
-      location: "Panagdait",
-      tablesLeft: "2 Tables Left",
-    },
-    {
-      name: "OASIS",
-      imageSrc: "/image4.jpg",
-      imageAlt: "OASIS venue",
-      location: "Panagdait",
-      tablesLeft: "2 Tables Left",
-    },
-    {
-      name: "OASIS",
-      imageSrc: "/image4.jpg",
-      imageAlt: "OASIS venue",
-      location: "Panagdait",
-      tablesLeft: "2 Tables Left",
-    },
-  ];
-
   
 
   return (
@@ -291,7 +304,7 @@ export default function Home() {
           </p>
         </section>
 
-        <section className = "w-full max-w-6xl mb-32">
+        <section className = "w-full max-w-7xl mb-32">
           <h2 className="text-2xl md:text-3xl font-medium mb-8">TONIGHT&apos;S VENUES</h2>
           <AutoVenueCarousel venueCards={venueCards} />
         </section>
