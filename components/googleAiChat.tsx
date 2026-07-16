@@ -16,15 +16,8 @@ type GoogleAiChatProps = {
   description?: string;
   apiRoute?: string;
   model?: string;
-  venue?: VenueContext;
+  clubId?: string;
   inline?: boolean;
-};
-
-type VenueContext = {
-  name?: string | null;
-  description?: string | null;
-  floorplanImageUrl?: string | null;
-  address?: string | null;
 };
 
 const starterMessages: Message[] = [
@@ -35,9 +28,9 @@ const starterMessages: Message[] = [
 ];
 
 export function GoogleAiChat({
-  venue,
+  clubId,
   title = "The Concierge",
-  description = `Chat with our AI concierge about ${venue?.name}`,
+  description = "Chat with our AI concierge",
   apiRoute = "/api/ai/chat",
   model = "gemini-3.1-flash-lite",
   inline = false,
@@ -81,18 +74,6 @@ export function GoogleAiChat({
     if (inline) setFullscreen(true);
 
     try {
-      const contextParts: string[] = [];
-      if (venue?.name) contextParts.push(`Venue: ${venue.name}`);
-      if (venue?.address) contextParts.push(`Address: ${venue.address}`);
-      if (venue?.description) contextParts.push(`Description: ${venue.description}`);
-      if (venue?.floorplanImageUrl) contextParts.push(`Floorplan: ${venue.floorplanImageUrl}`);
-
-      const systemMessage = contextParts.length
-        ? { role: "system", content: `Context:\n${contextParts.join("\n\n")}` }
-        : null;
-
-      const messagesForApi = systemMessage ? [systemMessage, ...nextMessages] : nextMessages;
-
       const response = await fetch(apiRoute, {
         method: "POST",
         headers: {
@@ -100,7 +81,8 @@ export function GoogleAiChat({
         },
         body: JSON.stringify({
           model,
-          messages: messagesForApi,
+          clubId,
+          messages: nextMessages,
         }),
       });
 

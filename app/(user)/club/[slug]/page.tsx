@@ -125,12 +125,8 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
           <div className="hidden h-full lg:block">
             <GoogleAiChat
               inline
-              venue={{
-                name: club.name,
-                description: club.description ?? null,
-                floorplanImageUrl: primaryFloorPlan?.image_url ?? null,
-                address: club.address ?? null,
-              }}
+              clubId={club.id}
+              description={`Chat with our AI concierge about ${club.name}`}
             />
           </div>
         </div>
@@ -139,12 +135,8 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
         <div className="mt-8 lg:hidden">
           <GoogleAiChat
             inline
-            venue={{
-              name: club.name,
-              description: club.description ?? null,
-              floorplanImageUrl: primaryFloorPlan?.image_url ?? null,
-              address: club.address ?? null,
-            }}
+            clubId={club.id}
+            description={`Chat with our AI concierge about ${club.name}`}
           />
         </div>
 

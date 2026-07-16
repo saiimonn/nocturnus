@@ -8,7 +8,6 @@ import SearchSuggestionsCard from "@/components/searchSuggestionsCard";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, MapIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { GoogleAiChat } from "@/components/googleAiChat";
 
 export default function Home() {
   const router = useRouter();
