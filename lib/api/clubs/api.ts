@@ -132,14 +132,15 @@ export const getClubFloorPlans = handle(
   async (_request, context: RouteContext<{ slug: string }>) => {
     const { slug } = await context.params
     const clubId = await clubIdFromSlug(slug)
-    const floorPlans = fromDb(
-      await supabase
-        .from("floor_plans")
-        .select("*")
-        .eq("club_id", clubId)
-        .order("created_at"),
-    )
-    return Response.json({ floorPlans })
+    const { data: floorPlan, error } = await supabase
+      .from("floor_plans")
+      .select("*")
+      .eq("club_id", clubId)
+      .maybeSingle()
+    if (error) {
+      throw new Error(error.message)
+    }
+    return Response.json({ floorPlan })
   },
 )
 
@@ -373,15 +374,23 @@ export const createFloorPlan = handle(
     }
     const imageUrl = await uploadClubMedia(`clubs/${clubId}/floor-plans`, file)
 
+    // Upsert on club_id (unique) instead of a plain insert: the client decides
+    // create-vs-update from local React state, which can be stale (e.g. a
+    // remount racing the initial load), so a second "create" for a club that
+    // already has a floor plan must update it rather than produce a duplicate
+    // row that the read path would then have to arbitrate between.
     const floorPlan = fromDb(
       await supabaseAdmin
         .from("floor_plans")
-        .insert({
-          club_id: clubId,
-          name,
-          image_url: imageUrl,
-          labels,
-        })
+        .upsert(
+          {
+            club_id: clubId,
+            name,
+            image_url: imageUrl,
+            labels,
+          },
+          { onConflict: "club_id" },
+        )
         .select("*")
         .single(),
     )

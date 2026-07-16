@@ -4,6 +4,10 @@ import { badRequest } from "./errors"
 const CLUB_MEDIA_BUCKET = "club-media"
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024
 
+// Must match the `club-media` bucket's allowed_mime_types in Supabase, or
+// uploads pass this check and then fail with an opaque error from Storage.
+const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"]
+
 // Every club-owned image (gallery photos, cover image, floor plan
 // background, event banners) lands in the same public bucket under a
 // type-specific path prefix, keyed by the file field on a multipart request.
@@ -15,8 +19,8 @@ export async function requireImageFile(
   if (!(file instanceof File)) {
     throw badRequest(`${field} is required`)
   }
-  if (!file.type.startsWith("image/")) {
-    throw badRequest(`${field} must be an image`)
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    throw badRequest(`${field} must be a PNG, JPEG, WEBP, or GIF image`)
   }
   if (file.size > MAX_IMAGE_BYTES) {
     throw badRequest(`${field} must be smaller than 8MB`)

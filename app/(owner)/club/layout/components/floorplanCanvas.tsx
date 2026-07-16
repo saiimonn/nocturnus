@@ -111,9 +111,10 @@ const FloorplanCanvas = () => {
         if (!floorPlansResponse.ok) {
           throw new Error(`Request failed with status ${floorPlansResponse.status}`);
         }
-        const { floorPlans } = (await floorPlansResponse.json()) as { floorPlans: FloorPlan[] };
+        const { floorPlan: primaryFloorPlan } = (await floorPlansResponse.json()) as {
+          floorPlan: FloorPlan | null;
+        };
         if (cancelled) return;
-        const primaryFloorPlan = floorPlans[0] ?? null;
         setFloorPlan(primaryFloorPlan);
 
         if (primaryFloorPlan) {
@@ -177,7 +178,8 @@ const FloorplanCanvas = () => {
           { method: 'PATCH', body: formData },
         );
         if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`);
+          const { message } = (await response.json().catch(() => ({}))) as { message?: string };
+          throw new Error(message ?? `Request failed with status ${response.status}`);
         }
         const { floorPlan: updated } = (await response.json()) as { floorPlan: FloorPlan };
         setFloorPlan(updated);
@@ -188,7 +190,8 @@ const FloorplanCanvas = () => {
           body: formData,
         });
         if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`);
+          const { message } = (await response.json().catch(() => ({}))) as { message?: string };
+          throw new Error(message ?? `Request failed with status ${response.status}`);
         }
         const { floorPlan: created } = (await response.json()) as { floorPlan: FloorPlan };
         setFloorPlan(created);
@@ -198,7 +201,8 @@ const FloorplanCanvas = () => {
       setFloorplanImagePreview(null);
     } catch (error) {
       console.error('Failed to save floorplan image:', error);
-      window.alert('Failed to save the floorplan image. Please try again.');
+      const message = error instanceof Error ? error.message : 'Please try again.';
+      window.alert(`Failed to save the floorplan image: ${message}`);
     } finally {
       setIsSavingFloorplanImage(false);
     }
