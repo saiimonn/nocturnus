@@ -1,16 +1,29 @@
 import { supabase } from "@/lib/supabase"
-import { requireClubOwner, requireOwner } from "@/lib/api/shared/auth"
+import { supabaseAdmin } from "@/lib/supabase-admin"
+import { requireClubOwner } from "@/lib/api/shared/auth"
 import {
   badRequest,
   conflict,
   fromDb,
   handle,
   notFound,
-  notImplemented,
   readJson,
   requireFields,
   type RouteContext,
 } from "@/lib/api/shared/errors"
+import type { Database } from "@/lib/db"
+
+type ReservationRow = Database["public"]["Tables"]["reservations"]["Row"]
+type ReservationUpdate = Database["public"]["Tables"]["reservations"]["Update"]
+const RESERVATION_STATUSES = ["pending", "confirmed", "cancelled", "checked_in"] as const
+type ReservationStatus = (typeof RESERVATION_STATUSES)[number]
+
+function parseReservationStatus(value: unknown): ReservationStatus {
+  if (!RESERVATION_STATUSES.includes(value as ReservationStatus)) {
+    throw badRequest(`status must be one of: ${RESERVATION_STATUSES.join(", ")}`)
+  }
+  return value as ReservationStatus
+}
 
 export const createReservation = handle(async (request) => {
   const body = await readJson(request)
@@ -72,19 +85,81 @@ export const getReservation = handle(
   },
 )
 
+// Owners update a reservation's status (confirm/cancel/etc.) and, occasionally,
+// its table/party size/date. The route only carries the reservation id, so the
+// owning club is resolved from the existing row before delegating to
+// requireClubOwner for the actual authorization check.
 export const updateReservation = handle(
-  async (_request, context: RouteContext<{ id: string }>) => {
-    await context.params
-    await requireOwner()
-    throw notImplemented("Updating a reservation is not implemented yet")
+  async (request, context: RouteContext<{ id: string }>) => {
+    const { id } = await context.params
+
+    const existing = fromDb<ReservationRow>(
+      await supabaseAdmin.from("reservations").select("*").eq("id", id).maybeSingle(),
+    )
+    await requireClubOwner(existing.club_id)
+
+    const body = await readJson(request)
+    const updates: ReservationUpdate = { updated_at: new Date().toISOString() }
+
+    if (body.status !== undefined) {
+      updates.status = parseReservationStatus(body.status)
+      // A confirmed reservation needs a QR code for door check-in
+      // (checkinReservation looks rows up by this token) — generate one the
+      // first time a reservation is confirmed, if it doesn't already have one.
+      if (updates.status === "confirmed" && !existing.qr_code_token) {
+        updates.qr_code_token = crypto.randomUUID()
+      }
+    }
+    if (body.party_size !== undefined) {
+      const partySize = Number(body.party_size)
+      if (!Number.isInteger(partySize) || partySize < 1) {
+        throw badRequest("party_size must be a positive integer")
+      }
+      updates.party_size = partySize
+    }
+    if (body.reservation_date !== undefined) {
+      if (typeof body.reservation_date !== "string") {
+        throw badRequest("reservation_date must be an ISO date string")
+      }
+      updates.reservation_date = body.reservation_date
+    }
+    if (body.table_id !== undefined) {
+      updates.table_id = String(body.table_id)
+    }
+
+    const reservation = fromDb(
+      await supabaseAdmin
+        .from("reservations")
+        .update(updates)
+        .eq("id", id)
+        .select("*")
+        .maybeSingle(),
+    )
+    return Response.json({ reservation })
   },
 )
 
+// All reservations for the authenticated owner's club, across every status,
+// most recent first, plus that club's tables (across all floor plans) so the
+// owner UI can resolve table_id -> label without a second round trip per
+// floor plan. Uses the service-role client so pending/cancelled rows are
+// visible to their owner regardless of RLS.
 export const listClubReservations = handle(
   async (_request, context: RouteContext<{ clubId: string }>) => {
     const { clubId } = await context.params
     await requireClubOwner(clubId)
-    throw notImplemented("Listing club reservations is not implemented yet")
+
+    const reservations = fromDb(
+      await supabaseAdmin
+        .from("reservations")
+        .select("*")
+        .eq("club_id", clubId)
+        .order("reservation_date", { ascending: false }),
+    )
+    const tables = fromDb(
+      await supabaseAdmin.from("club_tables").select("*").eq("club_id", clubId).order("label"),
+    )
+    return Response.json({ clubId, reservations, tables })
   },
 )
 

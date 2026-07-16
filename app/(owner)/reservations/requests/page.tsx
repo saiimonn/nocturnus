@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -28,20 +28,86 @@ import {
   Clock,
   Eye,
 } from "lucide-react"
-import type { Reservation } from "@/lib/types"
-import { reservations as initialReservations, tableMap, events } from "@/lib/mock-data-owner"
+import type { ClubTable, Event, Reservation } from "@/lib/types"
 
 type FilterStatus = "all" | "pending" | "confirmed" | "cancelled"
 
 const PAGE_SIZE = 8
 
 export default function BookingRequestsPage() {
-  const [reservations, setReservations] = useState<Reservation[]>(initialReservations)
+  const [reservations, setReservations] = useState<Reservation[]>([])
+  const [tables, setTables] = useState<ClubTable[]>([])
+  const [events, setEvents] = useState<Event[]>([])
+  const [clubId, setClubId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [isUpdating, setIsUpdating] = useState(false)
+
   const [searchQuery, setSearchQuery] = useState("")
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all")
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [page, setPage] = useState(1)
+
+  const tableMap = new Map(tables.map((t) => [t.id, t]))
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadReservations = async () => {
+      setIsLoading(true)
+      setLoadError(null)
+      try {
+        const clubResponse = await fetch("/api/owner/club")
+        if (!clubResponse.ok) {
+          throw new Error(`Request failed with status ${clubResponse.status}`)
+        }
+        const { club } = (await clubResponse.json()) as { club: { id: string } | null }
+        if (!club) {
+          if (!cancelled) {
+            setClubId(null)
+            setReservations([])
+            setTables([])
+          }
+          return
+        }
+
+        const [reservationsResponse, eventsResponse] = await Promise.all([
+          fetch(`/api/owner/clubs/${club.id}/reservations`),
+          fetch("/api/owner/events"),
+        ])
+        if (!reservationsResponse.ok) {
+          throw new Error(`Request failed with status ${reservationsResponse.status}`)
+        }
+        const reservationsData = (await reservationsResponse.json()) as {
+          clubId: string
+          reservations: Reservation[]
+          tables: ClubTable[]
+        }
+        const eventsData = eventsResponse.ok
+          ? ((await eventsResponse.json()) as { events: Event[] })
+          : { events: [] }
+
+        if (!cancelled) {
+          setClubId(reservationsData.clubId)
+          setReservations(reservationsData.reservations)
+          setTables(reservationsData.tables)
+          setEvents(eventsData.events)
+        }
+      } catch (error) {
+        console.error("Failed to load reservation requests:", error)
+        if (!cancelled) setLoadError("Failed to load reservations. Please try again.")
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+
+    loadReservations()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const pendingCount = reservations.filter((r) => r.status === "pending").length
   const confirmedCount = reservations.filter((r) => r.status === "confirmed").length
@@ -63,34 +129,31 @@ export default function BookingRequestsPage() {
     page * PAGE_SIZE
   )
 
-  const handleConfirm = (id: string) => {
-    setReservations((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              status: "confirmed" as const,
-              qr_code_token: crypto.randomUUID(),
-              updated_at: new Date().toISOString(),
-            }
-          : r
-      )
-    )
-    setSelectedReservation(null)
-    setIsDetailsOpen(false)
+  const updateStatus = async (id: string, status: "confirmed" | "cancelled") => {
+    setIsUpdating(true)
+    try {
+      const response = await fetch(`/api/reservations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      })
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`)
+      }
+      const { reservation } = (await response.json()) as { reservation: Reservation }
+      setReservations((prev) => prev.map((r) => (r.id === reservation.id ? reservation : r)))
+      setSelectedReservation(null)
+      setIsDetailsOpen(false)
+    } catch (error) {
+      console.error("Failed to update reservation:", error)
+      window.alert("Failed to update the reservation. Please try again.")
+    } finally {
+      setIsUpdating(false)
+    }
   }
 
-  const handleDecline = (id: string) => {
-    setReservations((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? { ...r, status: "cancelled" as const, updated_at: new Date().toISOString() }
-          : r
-      )
-    )
-    setSelectedReservation(null)
-    setIsDetailsOpen(false)
-  }
+  const handleConfirm = (id: string) => updateStatus(id, "confirmed")
+  const handleDecline = (id: string) => updateStatus(id, "cancelled")
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-PH", {
@@ -210,7 +273,24 @@ export default function BookingRequestsPage() {
         </div>
       </div>
 
-      {filteredReservations.length === 0 ? (
+      {isLoading ? (
+        <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30">
+          <p className="text-sm text-muted-foreground">Loading reservations…</p>
+        </div>
+      ) : loadError ? (
+        <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-destructive/40 bg-destructive/5">
+          <h3 className="text-lg font-semibold text-foreground">Couldn&apos;t load reservations</h3>
+          <p className="text-sm text-muted-foreground">{loadError}</p>
+        </div>
+      ) : !clubId ? (
+        <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30">
+          <Calendar className="h-8 w-8 text-muted-foreground" />
+          <h3 className="text-lg font-semibold text-foreground">No club registered yet</h3>
+          <p className="text-sm text-muted-foreground">
+            Register your club before reservation requests can come in.
+          </p>
+        </div>
+      ) : filteredReservations.length === 0 ? (
         <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30">
           <Calendar className="h-8 w-8 text-muted-foreground" />
           <h3 className="text-lg font-semibold text-foreground">No requests found</h3>
@@ -348,11 +428,15 @@ export default function BookingRequestsPage() {
               </div>
               {selectedReservation.status === "pending" && (
                 <DialogFooter className="mt-2">
-                  <Button variant="outline" onClick={() => handleDecline(selectedReservation.id)}>
+                  <Button
+                    variant="outline"
+                    disabled={isUpdating}
+                    onClick={() => handleDecline(selectedReservation.id)}
+                  >
                     <X className="mr-1 h-4 w-4" />
                     Decline
                   </Button>
-                  <Button onClick={() => handleConfirm(selectedReservation.id)}>
+                  <Button disabled={isUpdating} onClick={() => handleConfirm(selectedReservation.id)}>
                     <Check className="mr-1 h-4 w-4" />
                     Confirm
                   </Button>
