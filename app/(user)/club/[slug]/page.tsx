@@ -69,20 +69,6 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
     <div className="min-h-screen w-full bg-black text-white -mt-20 z-0">
       {/* Hero */}
 
-
-
-      
-       <section className="w-full max-w-6xl mb-24">
-          <GoogleAiChat
-            venue={{
-              name: club.name,
-              description: club.description ?? null,
-              floorplanImageUrl: primaryFloorPlan?.image_url ?? null,
-              address: club.address ?? null,
-            }}
-          />
-        </section>
-
       <div className="relative h-105 w-full overflow-hidden md:h-130">
         {club.cover_image_url && (
           <Image
@@ -105,9 +91,9 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
         </div>
       </div>
 
-      {/* Venue details */}
+      {/* Venue details + AI chat */}
       <div className="px-8 py-16 md:px-16">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-[160px_1fr]">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[160px_1fr_1fr]">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-white">
             The Venue
           </h2>
@@ -135,6 +121,31 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
               </div>
             )}
           </div>
+
+          <div className="hidden h-full lg:block">
+            <GoogleAiChat
+              inline
+              venue={{
+                name: club.name,
+                description: club.description ?? null,
+                floorplanImageUrl: primaryFloorPlan?.image_url ?? null,
+                address: club.address ?? null,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Mobile AI chat */}
+        <div className="mt-8 lg:hidden">
+          <GoogleAiChat
+            inline
+            venue={{
+              name: club.name,
+              description: club.description ?? null,
+              floorplanImageUrl: primaryFloorPlan?.image_url ?? null,
+              address: club.address ?? null,
+            }}
+          />
         </div>
 
         {/* Atmosphere gallery */}
@@ -163,8 +174,6 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
         )}
       </div>
 
-
-        
       <div className="px-8 pb-16 md:px-16">
         <VenueBooking
           venueName={club.name}
