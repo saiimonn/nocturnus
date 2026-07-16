@@ -111,9 +111,10 @@ const FloorplanCanvas = () => {
         if (!floorPlansResponse.ok) {
           throw new Error(`Request failed with status ${floorPlansResponse.status}`);
         }
-        const { floorPlans } = (await floorPlansResponse.json()) as { floorPlans: FloorPlan[] };
+        const { floorPlan: primaryFloorPlan } = (await floorPlansResponse.json()) as {
+          floorPlan: FloorPlan | null;
+        };
         if (cancelled) return;
-        const primaryFloorPlan = floorPlans[0] ?? null;
         setFloorPlan(primaryFloorPlan);
 
         if (primaryFloorPlan) {
