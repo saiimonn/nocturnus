@@ -20,7 +20,6 @@ export const config = {
   matcher: [
     "/dashboard/:path*",
     "/reservations/:path*",
-    "/discounts/:path*",
     "/owner-events/:path*",
     "/club/details/:path*",
     "/club/layout/:path*",

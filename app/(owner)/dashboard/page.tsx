@@ -1,80 +1,9 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { buttonVariants } from "@/components/ui/button"
-import {
-  club,
-  clubTables,
-  events,
-  discountCodes,
-  reservations,
-  tableMap,
-} from "@/lib/mock-data-owner"
-
-const now = new Date()
-
-const greeting =
-  now.getHours() < 12
-    ? "Good morning"
-    : now.getHours() < 18
-      ? "Good afternoon"
-      : "Good evening"
-
-const pending = reservations.filter((r) => r.status === "pending")
-const confirmed = reservations.filter((r) => r.status === "confirmed")
-const activeTables = clubTables.filter((t) => t.is_available)
-const upcomingEvents = events.filter(
-  (e) => e.status === "published" && new Date(e.event_date) > now
-)
-const activePromos = discountCodes.filter(
-  (d) => d.is_active && new Date(d.end_date) > now
-)
-
-const estimatedRevenue = confirmed.reduce((sum, r) => {
-  const table = tableMap.get(r.table_id)
-  return sum + (table?.minimum_spend ?? 0)
-}, 0)
-
-const totalPartySize = reservations.reduce((sum, r) => sum + r.party_size, 0)
-
-const stats = [
-  {
-    label: "Total Reservations",
-    value: reservations.length.toString(),
-    sub: "all time",
-  },
-  {
-    label: "Pending Requests",
-    value: pending.length.toString(),
-    sub: "awaiting review",
-    highlight: pending.length > 0,
-  },
-  {
-    label: "Confirmed Bookings",
-    value: confirmed.length.toString(),
-    sub: "upcoming",
-  },
-  {
-    label: "Active Tables",
-    value: `${activeTables.length} / ${clubTables.length}`,
-    sub: "available on floor",
-  },
-  {
-    label: "Upcoming Events",
-    value: upcomingEvents.length.toString(),
-    sub: "published",
-  },
-  {
-    label: "Active Promos",
-    value: activePromos.length.toString(),
-    sub: "discount codes",
-  },
-]
-
-const recentReservations = [...reservations]
-  .sort(
-    (a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  )
-  .slice(0, 5)
+import type { Club, ClubTable, Event, Reservation } from "@/lib/types"
 
 const statusStyles: Record<string, string> = {
   pending:
@@ -104,6 +33,158 @@ function formatDateTime(iso: string) {
 }
 
 export default function OwnerDashboardPage() {
+  const [club, setClub] = useState<Club | null>(null)
+  const [clubTables, setClubTables] = useState<ClubTable[]>([])
+  const [events, setEvents] = useState<Event[]>([])
+  const [reservations, setReservations] = useState<Reservation[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadDashboard = async () => {
+      setIsLoading(true)
+      setLoadError(null)
+      try {
+        const clubResponse = await fetch("/api/owner/club")
+        if (!clubResponse.ok) {
+          throw new Error(`Request failed with status ${clubResponse.status}`)
+        }
+        const { club: ownerClub } = (await clubResponse.json()) as { club: Club | null }
+        if (!ownerClub) {
+          if (!cancelled) {
+            setClub(null)
+            setClubTables([])
+            setEvents([])
+            setReservations([])
+          }
+          return
+        }
+
+        const [reservationsResponse, eventsResponse] = await Promise.all([
+          fetch(`/api/owner/clubs/${ownerClub.id}/reservations`),
+          fetch("/api/owner/events"),
+        ])
+        if (!reservationsResponse.ok) {
+          throw new Error(`Request failed with status ${reservationsResponse.status}`)
+        }
+        const reservationsData = (await reservationsResponse.json()) as {
+          reservations: Reservation[]
+          tables: ClubTable[]
+        }
+        const eventsData = eventsResponse.ok
+          ? ((await eventsResponse.json()) as { events: Event[] })
+          : { events: [] }
+
+        if (!cancelled) {
+          setClub(ownerClub)
+          setReservations(reservationsData.reservations)
+          setClubTables(reservationsData.tables)
+          setEvents(eventsData.events)
+        }
+      } catch (error) {
+        console.error("Failed to load owner dashboard:", error)
+        if (!cancelled) setLoadError("Failed to load dashboard. Please try again.")
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+
+    loadDashboard()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30">
+        <p className="text-sm text-muted-foreground">Loading dashboard…</p>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-destructive/40 bg-destructive/5">
+        <h3 className="text-lg font-semibold text-foreground">Couldn&apos;t load dashboard</h3>
+        <p className="text-sm text-muted-foreground">{loadError}</p>
+      </div>
+    )
+  }
+
+  if (!club) {
+    return (
+      <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30">
+        <h3 className="text-lg font-semibold text-foreground">No club registered yet</h3>
+        <p className="text-sm text-muted-foreground">
+          Register your club to start seeing your dashboard.
+        </p>
+      </div>
+    )
+  }
+
+  const now = new Date()
+  const greeting =
+    now.getHours() < 12
+      ? "Good morning"
+      : now.getHours() < 18
+        ? "Good afternoon"
+        : "Good evening"
+
+  const tableMap = new Map(clubTables.map((t) => [t.id, t]))
+  const pending = reservations.filter((r) => r.status === "pending")
+  const confirmed = reservations.filter((r) => r.status === "confirmed")
+  const activeTables = clubTables.filter((t) => t.is_available)
+  const upcomingEvents = events.filter(
+    (e) => e.status === "published" && new Date(e.event_date) > now
+  )
+
+  const estimatedRevenue = confirmed.reduce((sum, r) => {
+    const table = tableMap.get(r.table_id)
+    return sum + (table?.minimum_spend ?? 0)
+  }, 0)
+
+  const totalPartySize = reservations.reduce((sum, r) => sum + r.party_size, 0)
+
+  const stats = [
+    {
+      label: "Total Reservations",
+      value: reservations.length.toString(),
+      sub: "all time",
+    },
+    {
+      label: "Pending Requests",
+      value: pending.length.toString(),
+      sub: "awaiting review",
+      highlight: pending.length > 0,
+    },
+    {
+      label: "Confirmed Bookings",
+      value: confirmed.length.toString(),
+      sub: "upcoming",
+    },
+    {
+      label: "Active Tables",
+      value: `${activeTables.length} / ${clubTables.length}`,
+      sub: "available on floor",
+    },
+    {
+      label: "Upcoming Events",
+      value: upcomingEvents.length.toString(),
+      sub: "published",
+    },
+  ]
+
+  const recentReservations = [...reservations]
+    .sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+    .slice(0, 5)
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-background/70 p-6 shadow-sm">
@@ -117,12 +198,12 @@ export default function OwnerDashboardPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
-            href="/booking/requests"
+            href="/reservations/requests"
             className={buttonVariants({ variant: "outline" })}
           >
             View bookings
           </Link>
-          <Link href="/events" className={buttonVariants()}>
+          <Link href="/owner-events" className={buttonVariants()}>
             Create event
           </Link>
         </div>

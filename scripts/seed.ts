@@ -9,7 +9,6 @@ import {
   makeFloorPlan,
   makeClubTable,
   makeEvent,
-  makeDiscountCode,
   makeReservation,
   makeVerificationToken,
 } from "./seed/factories"
@@ -17,12 +16,11 @@ import {
 const COUNTS = {
   owners: 8,
   admins: 2,
-  clubsPerOwner: 2,
+  clubsPerOwner: 1,
   imagesPerClub: 4,
   floorPlansPerClub: 2,
   tablesPerFloorPlan: 8,
   eventsPerClub: 3,
-  discountCodesPerClub: 2,
   reservationsPerClub: 15,
   verificationTokens: 5,
 }
@@ -57,7 +55,6 @@ const WIPE_ORDER = [
   "club_images",
   "floor_plans",
   "events",
-  "discount_codes",
   "clubs",
   "users",
   "owner_verification_tokens",
@@ -118,7 +115,6 @@ async function main(): Promise<void> {
   const floorPlans: ReturnType<typeof makeFloorPlan>[] = []
   const clubTables: ReturnType<typeof makeClubTable>[] = []
   const events: ReturnType<typeof makeEvent>[] = []
-  const discountCodes: ReturnType<typeof makeDiscountCode>[] = []
   const reservations: ReturnType<typeof makeReservation>[] = []
 
   for (const owner of owners) {
@@ -134,10 +130,6 @@ async function main(): Promise<void> {
         makeEvent(club.id!),
       )
       events.push(...clubEvents)
-
-      for (let d = 0; d < COUNTS.discountCodesPerClub; d++) {
-        discountCodes.push(makeDiscountCode(club.id!))
-      }
 
       const clubTableRows: ReturnType<typeof makeClubTable>[] = []
       for (let f = 0; f < COUNTS.floorPlansPerClub; f++) {
@@ -171,7 +163,6 @@ async function main(): Promise<void> {
   await insertRows("club_images", clubImages)
   await insertRows("floor_plans", floorPlans)
   await insertRows("events", events)
-  await insertRows("discount_codes", discountCodes)
   await insertRows("club_tables", clubTables)
   await insertRows("reservations", reservations)
   await insertRows(

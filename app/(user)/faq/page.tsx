@@ -41,11 +41,6 @@ const FAQ_ITEMS = [
       "The minimum spend is the lowest amount you must spend on food and drinks to occupy a reserved table. It is set by the venue and displayed on the table details before you book.",
   },
   {
-    question: "Are there discount codes?",
-    answer:
-      "Some venues offer discount codes. If you have one, you can enter it during checkout. The discount applies when your order meets the code's minimum order value.",
-  },
-  {
     question: "How do I contact support?",
     answer:
       "You can reach us at support@otuscebu.com. For venue-specific issues, contact the venue directly through their listing page.",

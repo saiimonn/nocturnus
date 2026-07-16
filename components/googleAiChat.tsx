@@ -54,7 +54,14 @@ export function GoogleAiChat({
       return;
     }
 
-    const nextMessages: Message[] = [...messages, { role: "user", content: trimmedInput }];
+    const MAX_MESSAGES = 14;
+    if (messages.length >= MAX_MESSAGES) {
+      setError(`Message limit reached. You can only send up to ${MAX_MESSAGES} messages.`);
+      return;
+    }
+
+    const newMessage: Message = { role: "user", content: trimmedInput };
+    const nextMessages: Message[] = [...messages, newMessage].slice(-MAX_MESSAGES);
     setMessages(nextMessages);
     setInput("");
     setLoading(true);
@@ -90,13 +97,15 @@ export function GoogleAiChat({
         throw new Error(payload.error ?? "The request failed.");
       }
 
+      const assistantMessage: Message = {
+        role: "assistant",
+        content: payload.message ?? "No response returned.",
+      };
+
       setMessages([
         ...nextMessages,
-        {
-          role: "assistant",
-          content: payload.message ?? "No response returned.",
-        },
-      ]);
+        assistantMessage,
+      ].slice(-MAX_MESSAGES));
     } catch (caughtError) {
       const message = caughtError instanceof Error ? caughtError.message : "The request failed.";
       setError(message);

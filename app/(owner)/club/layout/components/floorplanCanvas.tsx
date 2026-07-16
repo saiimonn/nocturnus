@@ -16,11 +16,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-import type { ClubTable } from '@/lib/types';
-import { club, clubTables as dbTables } from '@/lib/mock-data-owner';
+import type { Club, ClubTable, FloorPlan } from '@/lib/types';
 
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
+const DEFAULT_FLOOR_PLAN_NAME = 'Main Floor';
 
 type TableShape = 'rect' | 'circle';
 
@@ -59,15 +59,13 @@ function defaultDimensions(shape: TableShape): CanvasDimensions {
 }
 
 const FloorplanCanvas = () => {
-  const [tables, setTables] = useState<ClubTable[]>(dbTables);
-  const [dims, setDims] = useState<Record<string, CanvasDimensions>>(() => {
-    const map: Record<string, CanvasDimensions> = {};
-    for (const t of dbTables) {
-      const shape = shapeForCategory(t.category);
-      map[t.id] = defaultDimensions(shape);
-    }
-    return map;
-  });
+  const [club, setClub] = useState<Club | null>(null);
+  const [floorPlan, setFloorPlan] = useState<FloorPlan | null>(null);
+  const [tables, setTables] = useState<ClubTable[]>([]);
+  const [dims, setDims] = useState<Record<string, CanvasDimensions>>({});
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -84,28 +82,158 @@ const FloorplanCanvas = () => {
   const [editCategory, setEditCategory] = useState<ClubTable['category']>('regular');
   const [editIsAvailable, setEditIsAvailable] = useState(true);
 
+  const [floorplanImageFile, setFloorplanImageFile] = useState<File | null>(null);
+  const [floorplanImagePreview, setFloorplanImagePreview] = useState<string | null>(null);
+  const [isSavingFloorplanImage, setIsSavingFloorplanImage] = useState(false);
+
   const transformerRef = useRef<Konva.Transformer | null>(null);
   const tableRefs = useRef<Record<string, Konva.Group | null>>({});
 
-  const [floorplanUrl, setFloorplanUrl] = useState<string | null>(null);
-  const [floorplanObjectUrl, setFloorplanObjectUrl] = useState<string | null>(null);
-  const [image] = useImage(floorplanUrl ?? '');
+  const [image] = useImage(floorplanImagePreview ?? floorPlan?.image_url ?? '');
 
-  const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>, id: string) => {
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        const clubResponse = await fetch('/api/owner/club');
+        if (!clubResponse.ok) {
+          throw new Error(`Request failed with status ${clubResponse.status}`);
+        }
+        const { club: ownerClub } = (await clubResponse.json()) as { club: Club | null };
+        if (cancelled) return;
+        setClub(ownerClub);
+        if (!ownerClub) return;
+
+        const floorPlansResponse = await fetch(`/api/clubs/${ownerClub.slug}/floor-plans`);
+        if (!floorPlansResponse.ok) {
+          throw new Error(`Request failed with status ${floorPlansResponse.status}`);
+        }
+        const { floorPlan: primaryFloorPlan } = (await floorPlansResponse.json()) as {
+          floorPlan: FloorPlan | null;
+        };
+        if (cancelled) return;
+        setFloorPlan(primaryFloorPlan);
+
+        if (primaryFloorPlan) {
+          const tablesResponse = await fetch(
+            `/api/clubs/${ownerClub.slug}/floor-plans/${primaryFloorPlan.id}/tables`,
+          );
+          if (!tablesResponse.ok) {
+            throw new Error(`Request failed with status ${tablesResponse.status}`);
+          }
+          const { tables: floorPlanTables } = (await tablesResponse.json()) as { tables: ClubTable[] };
+          if (cancelled) return;
+          setTables(floorPlanTables);
+          setDims(() => {
+            const map: Record<string, CanvasDimensions> = {};
+            for (const t of floorPlanTables) {
+              map[t.id] = defaultDimensions(shapeForCategory(t.category));
+            }
+            return map;
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load floorplan:', error);
+        if (!cancelled) setLoadError('Failed to load your floorplan. Please try again.');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleFloorplanImageFileChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0] ?? null;
+    if (floorplanImagePreview) URL.revokeObjectURL(floorplanImagePreview);
+    setFloorplanImageFile(file);
+    setFloorplanImagePreview(file ? URL.createObjectURL(file) : null);
+    event.target.value = '';
+  };
+
+  useEffect(() => {
+    return () => {
+      if (floorplanImagePreview) URL.revokeObjectURL(floorplanImagePreview);
+    };
+  }, [floorplanImagePreview]);
+
+  const handleSaveFloorplanImage = async () => {
+    if (!club || !floorplanImageFile) return;
+    setIsSavingFloorplanImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', floorplanImageFile);
+      if (floorPlan) {
+        const response = await fetch(
+          `/api/owner/clubs/${club.id}/floor-plans/${floorPlan.id}`,
+          { method: 'PATCH', body: formData },
+        );
+        if (!response.ok) {
+          const { message } = (await response.json().catch(() => ({}))) as { message?: string };
+          throw new Error(message ?? `Request failed with status ${response.status}`);
+        }
+        const { floorPlan: updated } = (await response.json()) as { floorPlan: FloorPlan };
+        setFloorPlan(updated);
+      } else {
+        formData.append('name', DEFAULT_FLOOR_PLAN_NAME);
+        const response = await fetch(`/api/owner/clubs/${club.id}/floor-plans`, {
+          method: 'POST',
+          body: formData,
+        });
+        if (!response.ok) {
+          const { message } = (await response.json().catch(() => ({}))) as { message?: string };
+          throw new Error(message ?? `Request failed with status ${response.status}`);
+        }
+        const { floorPlan: created } = (await response.json()) as { floorPlan: FloorPlan };
+        setFloorPlan(created);
+      }
+      if (floorplanImagePreview) URL.revokeObjectURL(floorplanImagePreview);
+      setFloorplanImageFile(null);
+      setFloorplanImagePreview(null);
+    } catch (error) {
+      console.error('Failed to save floorplan image:', error);
+      const message = error instanceof Error ? error.message : 'Please try again.';
+      window.alert(`Failed to save the floorplan image: ${message}`);
+    } finally {
+      setIsSavingFloorplanImage(false);
+    }
+  };
+
+  const handleDragEnd = async (e: Konva.KonvaEventObject<DragEvent>, id: string) => {
     const newX = e.target.x();
     const newY = e.target.y();
+    const pos_x = pixelToPos(newX, CANVAS_WIDTH);
+    const pos_y = pixelToPos(newY, CANVAS_HEIGHT);
 
     setTables((prev) =>
-      prev.map((table) =>
-        table.id === id
-          ? {
-              ...table,
-              pos_x: pixelToPos(newX, CANVAS_WIDTH),
-              pos_y: pixelToPos(newY, CANVAS_HEIGHT),
-            }
-          : table
-      )
+      prev.map((table) => (table.id === id ? { ...table, pos_x, pos_y } : table)),
     );
+
+    if (!club || !floorPlan) return;
+    try {
+      const response = await fetch(
+        `/api/owner/clubs/${club.id}/floor-plans/${floorPlan.id}/tables/${id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pos_x, pos_y }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Failed to save table position:', error);
+    }
   };
 
   const handleSelect = (id: string) => {
@@ -120,7 +248,7 @@ const FloorplanCanvas = () => {
     }
   };
 
-  const handleTransformEnd = (id: string) => {
+  const handleTransformEnd = async (id: string) => {
     const node = tableRefs.current[id];
     if (!node) return;
 
@@ -167,88 +295,106 @@ const FloorplanCanvas = () => {
     []
   );
 
-  const handleAddTable = () => {
-    if (!canSubmit) return;
-    const id = `t${Date.now()}`;
-    const shape = newTableShape;
-    const d = defaultDimensions(shape);
+  const handleAddTable = async () => {
+    if (!canSubmit || !club || !floorPlan) return;
 
-    const newTable: ClubTable = {
-      id,
-      floor_plan_id: `f-${club.id}`,
-      club_id: club.id,
-      label: newTableLabel.trim(),
-      capacity: Math.max(1, Math.round(parsedCapacity)),
-      minimum_spend: Math.max(1, Math.round(parsedMinSpend)),
-      category: newTableCategory,
-      pos_x: pixelToPos(260, CANVAS_WIDTH),
-      pos_y: pixelToPos(220, CANVAS_HEIGHT),
-      is_available: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+    const pos_x = pixelToPos(260, CANVAS_WIDTH);
+    const pos_y = pixelToPos(220, CANVAS_HEIGHT);
 
-    setTables((prev) => [...prev, newTable]);
-    setDims((prev) => ({ ...prev, [id]: d }));
-    setSelectedId(id);
-    setIsAddModalOpen(false);
-    setNewTableLabel('');
-    setNewTableCapacity('6');
-    setNewTableMinSpend('8000');
-    setNewTableCategory('regular');
-    setNewTableShape('rect');
+    try {
+      const response = await fetch(
+        `/api/owner/clubs/${club.id}/floor-plans/${floorPlan.id}/tables`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            label: newTableLabel.trim(),
+            capacity: Math.max(1, Math.round(parsedCapacity)),
+            minimum_spend: Math.max(1, Math.round(parsedMinSpend)),
+            category: newTableCategory,
+            pos_x,
+            pos_y,
+            is_available: true,
+          }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+      const { table: newTable } = (await response.json()) as { table: ClubTable };
+
+      setTables((prev) => [...prev, newTable]);
+      setDims((prev) => ({ ...prev, [newTable.id]: defaultDimensions(newTableShape) }));
+      setSelectedId(newTable.id);
+      setIsAddModalOpen(false);
+      setNewTableLabel('');
+      setNewTableCapacity('6');
+      setNewTableMinSpend('8000');
+      setNewTableCategory('regular');
+      setNewTableShape('rect');
+    } catch (error) {
+      console.error('Failed to add table:', error);
+      window.alert('Failed to add the table. Please try again.');
+    }
   };
 
-  const handleDeleteTable = () => {
-    if (!selectedId) return;
-    setTables((prev) => prev.filter((t) => t.id !== selectedId));
-    setDims((prev) => {
-      const next = { ...prev };
-      delete next[selectedId];
-      return next;
-    });
-    setSelectedId(null);
-    setIsDetailsOpen(false);
+  const handleDeleteTable = async () => {
+    if (!selectedId || !club || !floorPlan) return;
+    try {
+      const response = await fetch(
+        `/api/owner/clubs/${club.id}/floor-plans/${floorPlan.id}/tables/${selectedId}`,
+        { method: 'DELETE' },
+      );
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+      setTables((prev) => prev.filter((t) => t.id !== selectedId));
+      setDims((prev) => {
+        const next = { ...prev };
+        delete next[selectedId];
+        return next;
+      });
+      setSelectedId(null);
+      setIsDetailsOpen(false);
+    } catch (error) {
+      console.error('Failed to delete table:', error);
+      window.alert('Failed to delete the table. Please try again.');
+    }
   };
 
-  const handleEditSave = () => {
-    if (!selectedId || !canSaveEdits) return;
-    setTables((prev) =>
-      prev.map((t) =>
-        t.id === selectedId
-          ? {
-              ...t,
-              label: editLabel.trim(),
-              capacity: Math.max(1, Math.round(editParsedCapacity)),
-              minimum_spend: Math.max(1, Math.round(editParsedMinSpend)),
-              category: editCategory,
-              is_available: editIsAvailable,
-              updated_at: new Date().toISOString(),
-            }
-          : t
-      )
-    );
-    setDims((prev) => {
-      const shape = editCategory === 'bar' ? 'circle' : 'rect';
-      const d = prev[selectedId] ?? defaultDimensions(shape);
-      return { ...prev, [selectedId]: { ...d, ...defaultDimensions(shape) } };
-    });
-    setIsEditMode(false);
-  };
+  const handleEditSave = async () => {
+    if (!selectedId || !canSaveEdits || !club || !floorPlan) return;
+    try {
+      const response = await fetch(
+        `/api/owner/clubs/${club.id}/floor-plans/${floorPlan.id}/tables/${selectedId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            label: editLabel.trim(),
+            capacity: Math.max(1, Math.round(editParsedCapacity)),
+            minimum_spend: Math.max(1, Math.round(editParsedMinSpend)),
+            category: editCategory,
+            is_available: editIsAvailable,
+          }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+      const { table: updated } = (await response.json()) as { table: ClubTable };
 
-  const handleFloorplanUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    setFloorplanUrl(objectUrl);
-    setFloorplanObjectUrl(objectUrl);
+      setTables((prev) => prev.map((t) => (t.id === selectedId ? updated : t)));
+      setDims((prev) => {
+        const shape = shapeForCategory(updated.category);
+        return { ...prev, [selectedId]: defaultDimensions(shape) };
+      });
+      setIsEditMode(false);
+    } catch (error) {
+      console.error('Failed to save table:', error);
+      window.alert('Failed to save the table. Please try again.');
+    }
   };
-
-  useEffect(() => {
-    return () => {
-      if (floorplanObjectUrl) URL.revokeObjectURL(floorplanObjectUrl);
-    };
-  }, [floorplanObjectUrl]);
 
   useEffect(() => {
     const transformer = transformerRef.current;
@@ -265,6 +411,34 @@ const FloorplanCanvas = () => {
     transformer.getLayer()?.batchDraw();
   }, [selectedId, tables]);
 
+  if (isLoading) {
+    return (
+      <div className="flex min-h-90 flex-col items-center justify-center gap-3 p-4">
+        <p className="text-sm text-muted-foreground">Loading your floorplan…</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex min-h-90 flex-col items-center justify-center gap-3 p-4 text-center">
+        <h3 className="text-xl font-semibold text-foreground">Couldn&apos;t load your floorplan</h3>
+        <p className="text-sm text-muted-foreground">{loadError}</p>
+      </div>
+    );
+  }
+
+  if (!club) {
+    return (
+      <div className="flex min-h-90 flex-col items-center justify-center gap-3 p-4 text-center">
+        <h3 className="text-xl font-semibold text-foreground">You haven&apos;t registered a club yet</h3>
+        <p className="text-sm text-muted-foreground">
+          Set up your club before laying out its floor plan.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center p-4 rounded-xl overflow-hidden">
       <div className="mb-4 flex w-full max-w-200 items-center justify-between gap-3">
@@ -276,9 +450,11 @@ const FloorplanCanvas = () => {
             View Details
           </Button>
         )}
-        <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
-          Add Table
-        </Button>
+        {floorPlan && (
+          <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
+            Add Table
+          </Button>
+        )}
       </div>
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent>
@@ -384,129 +560,149 @@ const FloorplanCanvas = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {!floorplanUrl ? (
-        <div className="flex h-150 w-200 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30">
-          <div className="text-base font-semibold text-foreground">Upload your floorplan</div>
+      {!floorPlan?.image_url ? (
+        <div className="flex h-150 w-200 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 p-6 text-center">
+          <div className="text-base font-semibold text-foreground">Set your floorplan image</div>
           <div className="text-sm text-muted-foreground">
-            Add an image to start placing tables.
+            Upload an image to start placing tables.
           </div>
-          <label className="inline-flex cursor-pointer">
-            <span className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/80">
-              Upload Image
-            </span>
-            <input
+          <div className="flex w-full max-w-md flex-col gap-2 sm:flex-row sm:items-center">
+            <Input
               type="file"
               accept="image/*"
-              className="sr-only"
-              onChange={handleFloorplanUpload}
+              onChange={handleFloorplanImageFileChange}
             />
-          </label>
+            <Button
+              type="button"
+              onClick={handleSaveFloorplanImage}
+              disabled={!floorplanImageFile || isSavingFloorplanImage}
+            >
+              Save
+            </Button>
+          </div>
         </div>
       ) : (
-        <Stage
-          width={CANVAS_WIDTH}
-          height={CANVAS_HEIGHT}
-          className="bg-black border border-zinc-800 cursor-crosshair"
-          onMouseDown={(e) => {
-            const stage = e.target.getStage();
-            if (stage && e.target === stage) {
-              setSelectedId(null);
-              setIsDetailsOpen(false);
-            }
-          }}
-          onTouchStart={(e) => {
-            const stage = e.target.getStage();
-            if (stage && e.target === stage) {
-              setSelectedId(null);
-              setIsDetailsOpen(false);
-            }
-          }}
-        >
-          <Layer listening={false}>
-            {image && (
-              <KonvaImage image={image} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} opacity={0.4} />
-            )}
-          </Layer>
-
-          <Layer>
-            {tables.map((table) => {
-              const d = dims[table.id] ?? defaultDimensions(shapeForCategory(table.category));
-              const isSelected = table.id === selectedId;
-              const colors = categoryColors[table.category ?? ''] ?? defaultColors;
-              const shape = shapeForCategory(table.category);
-              const px = posToPixel(table.pos_x, CANVAS_WIDTH);
-              const py = posToPixel(table.pos_y, CANVAS_HEIGHT);
-
-              return (
-                <Group
-                  key={table.id}
-                  ref={(node) => { tableRefs.current[table.id] = node; }}
-                  x={px}
-                  y={py}
-                  draggable
-                  onClick={() => handleSelect(table.id)}
-                  onTap={() => handleSelect(table.id)}
-                  onDragEnd={(e) => handleDragEnd(e, table.id)}
-                  onTransformEnd={() => handleTransformEnd(table.id)}
-                  onMouseEnter={(e) => {
-                    const container = e.target.getStage()?.container();
-                    if (container) container.style.cursor = 'grab';
-                  }}
-                  onMouseLeave={(e) => {
-                    const container = e.target.getStage()?.container();
-                    if (container) container.style.cursor = 'crosshair';
-                  }}
-                >
-                  {shape === 'circle' ? (
-                    <Circle
-                      x={d.radius}
-                      y={d.radius}
-                      radius={d.radius}
-                      fill={isSelected ? '#3b82f6' : colors.fill}
-                      stroke={isSelected ? '#60a5fa' : colors.stroke}
-                      strokeWidth={2}
-                      shadowColor="black"
-                      shadowBlur={isSelected ? 12 : 4}
-                      shadowOpacity={0.6}
-                    />
-                  ) : (
-                    <Rect
-                      width={d.width}
-                      height={d.height}
-                      fill={isSelected ? '#3b82f6' : colors.fill}
-                      stroke={isSelected ? '#60a5fa' : colors.stroke}
-                      strokeWidth={2}
-                      cornerRadius={6}
-                      shadowColor="black"
-                      shadowBlur={isSelected ? 12 : 4}
-                      shadowOpacity={0.6}
-                    />
-                  )}
-                  <Text
-                    text={table.label}
-                    fontSize={14}
-                    fontFamily="sans-serif"
-                    fill="white"
-                    fontStyle="bold"
-                    width={shape === 'circle' ? d.radius * 2 : d.width}
-                    height={shape === 'circle' ? d.radius * 2 : d.height}
-                    align="center"
-                    verticalAlign="middle"
-                  />
-                </Group>
-              );
-            })}
-            <Transformer
-              ref={transformerRef}
-              rotateEnabled={false}
-              keepRatio={selectedTable ? shapeForCategory(selectedTable.category) === 'circle' : false}
-              boundBoxFunc={(oldBox, newBox) => {
-                if (newBox.width < 60 || newBox.height < 40) return oldBox;
-                return newBox;
-              }}
+        <>
+          <div className="mb-3 flex w-full max-w-200 flex-col gap-2 sm:flex-row sm:items-center">
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={handleFloorplanImageFileChange}
             />
-          </Layer>
-        </Stage>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSaveFloorplanImage}
+              disabled={!floorplanImageFile || isSavingFloorplanImage}
+            >
+              Update image
+            </Button>
+          </div>
+          <Stage
+            width={CANVAS_WIDTH}
+            height={CANVAS_HEIGHT}
+            className="bg-black border border-zinc-800 cursor-crosshair"
+            onMouseDown={(e) => {
+              const stage = e.target.getStage();
+              if (stage && e.target === stage) {
+                setSelectedId(null);
+                setIsDetailsOpen(false);
+              }
+            }}
+            onTouchStart={(e) => {
+              const stage = e.target.getStage();
+              if (stage && e.target === stage) {
+                setSelectedId(null);
+                setIsDetailsOpen(false);
+              }
+            }}
+          >
+            <Layer listening={false}>
+              {image && (
+                <KonvaImage image={image} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} opacity={0.4} />
+              )}
+            </Layer>
+
+            <Layer>
+              {tables.map((table) => {
+                const d = dims[table.id] ?? defaultDimensions(shapeForCategory(table.category));
+                const isSelected = table.id === selectedId;
+                const colors = categoryColors[table.category ?? ''] ?? defaultColors;
+                const shape = shapeForCategory(table.category);
+                const px = posToPixel(table.pos_x, CANVAS_WIDTH);
+                const py = posToPixel(table.pos_y, CANVAS_HEIGHT);
+
+                return (
+                  <Group
+                    key={table.id}
+                    ref={(node) => { tableRefs.current[table.id] = node; }}
+                    x={px}
+                    y={py}
+                    draggable
+                    onClick={() => handleSelect(table.id)}
+                    onTap={() => handleSelect(table.id)}
+                    onDragEnd={(e) => handleDragEnd(e, table.id)}
+                    onTransformEnd={() => handleTransformEnd(table.id)}
+                    onMouseEnter={(e) => {
+                      const container = e.target.getStage()?.container();
+                      if (container) container.style.cursor = 'grab';
+                    }}
+                    onMouseLeave={(e) => {
+                      const container = e.target.getStage()?.container();
+                      if (container) container.style.cursor = 'crosshair';
+                    }}
+                  >
+                    {shape === 'circle' ? (
+                      <Circle
+                        x={d.radius}
+                        y={d.radius}
+                        radius={d.radius}
+                        fill={isSelected ? '#3b82f6' : colors.fill}
+                        stroke={isSelected ? '#60a5fa' : colors.stroke}
+                        strokeWidth={2}
+                        shadowColor="black"
+                        shadowBlur={isSelected ? 12 : 4}
+                        shadowOpacity={0.6}
+                      />
+                    ) : (
+                      <Rect
+                        width={d.width}
+                        height={d.height}
+                        fill={isSelected ? '#3b82f6' : colors.fill}
+                        stroke={isSelected ? '#60a5fa' : colors.stroke}
+                        strokeWidth={2}
+                        cornerRadius={6}
+                        shadowColor="black"
+                        shadowBlur={isSelected ? 12 : 4}
+                        shadowOpacity={0.6}
+                      />
+                    )}
+                    <Text
+                      text={table.label}
+                      fontSize={14}
+                      fontFamily="sans-serif"
+                      fill="white"
+                      fontStyle="bold"
+                      width={shape === 'circle' ? d.radius * 2 : d.width}
+                      height={shape === 'circle' ? d.radius * 2 : d.height}
+                      align="center"
+                      verticalAlign="middle"
+                    />
+                  </Group>
+                );
+              })}
+              <Transformer
+                ref={transformerRef}
+                rotateEnabled={false}
+                keepRatio={selectedTable ? shapeForCategory(selectedTable.category) === 'circle' : false}
+                boundBoxFunc={(oldBox, newBox) => {
+                  if (newBox.width < 60 || newBox.height < 40) return oldBox;
+                  return newBox;
+                }}
+              />
+            </Layer>
+          </Stage>
+        </>
       )}
       <Dialog
         open={isDetailsOpen && Boolean(selectedTable)}

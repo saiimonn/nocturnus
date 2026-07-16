@@ -14,7 +14,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
-import { events as initialEvents } from "@/lib/mock-data-owner";
 import type { Event } from "@/lib/types";
 
 const statusStyles: Record<Event["status"], string> = {
@@ -24,7 +23,11 @@ const statusStyles: Record<Event["status"], string> = {
 };
 
 export default function EventsPage() {
-  const [events, setEvents] = useState<Event[]>(initialEvents);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [clubId, setClubId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -34,7 +37,7 @@ export default function EventsPage() {
   const [newDate, setNewDate] = useState("");
   const [newStatus, setNewStatus] = useState<Event["status"]>("draft");
   const [newDescription, setNewDescription] = useState("");
-  const [newImageUrl, setNewImageUrl] = useState("");
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [newImageObjectUrl, setNewImageObjectUrl] = useState<string | null>(
     null,
   );
@@ -43,7 +46,7 @@ export default function EventsPage() {
   const [editDate, setEditDate] = useState("");
   const [editStatus, setEditStatus] = useState<Event["status"]>("draft");
   const [editDescription, setEditDescription] = useState("");
-  const [editImageUrl, setEditImageUrl] = useState("");
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImageObjectUrl, setEditImageObjectUrl] = useState<string | null>(
     null,
   );
@@ -57,15 +60,28 @@ export default function EventsPage() {
 
   const findEvent = (id: string) => events.find((e) => e.id === id) ?? null;
 
-  const handleDeleteEvent = (id: string) => {
+  const handleDeleteEvent = async (id: string) => {
+    if (!clubId) return;
     if (!window.confirm("Delete this event? This action cannot be undone.")) {
       return;
     }
-    setEvents((prev) => prev.filter((e) => e.id !== id));
-    if (activeId === id) setActiveId(null);
-    if (editId === id) {
-      setIsEditOpen(false);
-      setEditId(null);
+    try {
+      const response = await fetch(
+        `/api/owner/clubs/${clubId}/events/${id}`,
+        { method: "DELETE" },
+      );
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+      setEvents((prev) => prev.filter((e) => e.id !== id));
+      if (activeId === id) setActiveId(null);
+      if (editId === id) {
+        setIsEditOpen(false);
+        setEditId(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete event:", error);
+      window.alert("Failed to delete the event. Please try again.");
     }
   };
 
@@ -74,31 +90,44 @@ export default function EventsPage() {
     setNewDate("");
     setNewStatus("draft");
     setNewDescription("");
-    setNewImageUrl("");
+    setNewImageFile(null);
     if (newImageObjectUrl) URL.revokeObjectURL(newImageObjectUrl);
     setNewImageObjectUrl(null);
   };
 
-  const handleAddEvent = () => {
+  const handleAddEvent = async () => {
+    if (!clubId) return;
     if (!newTitle.trim() || !newDate.trim() || !newDescription.trim()) return;
 
-    const image = newImageObjectUrl ?? (newImageUrl.trim() || null);
+    setIsSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("title", newTitle.trim());
+      formData.append("description", newDescription.trim());
+      formData.append(
+        "event_date",
+        new Date(`${newDate}T00:00:00`).toISOString(),
+      );
+      formData.append("status", newStatus);
+      if (newImageFile) formData.append("image", newImageFile);
 
-    const nextEvent: Event = {
-      id: crypto.randomUUID(),
-      club_id: initialEvents[0]?.club_id ?? "",
-      title: newTitle.trim(),
-      description: newDescription.trim(),
-      image_url: image,
-      event_date: new Date(`${newDate}T00:00:00`).toISOString(),
-      status: newStatus,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    setEvents((prev) => [nextEvent, ...prev]);
-    setIsAddOpen(false);
-    resetAddForm();
+      const response = await fetch(`/api/owner/clubs/${clubId}/events`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+      const { event } = (await response.json()) as { event: Event };
+      setEvents((prev) => [event, ...prev]);
+      setIsAddOpen(false);
+      resetAddForm();
+    } catch (error) {
+      console.error("Failed to create event:", error);
+      window.alert("Failed to create the event. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetEditForm = () => {
@@ -106,7 +135,7 @@ export default function EventsPage() {
     setEditDate("");
     setEditStatus("draft");
     setEditDescription("");
-    setEditImageUrl("");
+    setEditImageFile(null);
     if (editImageObjectUrl) URL.revokeObjectURL(editImageObjectUrl);
     setEditImageObjectUrl(null);
   };
@@ -119,38 +148,47 @@ export default function EventsPage() {
     setEditDate(event.event_date.slice(0, 10));
     setEditStatus(event.status);
     setEditDescription(event.description ?? "");
-    setEditImageUrl(event.image_url ?? "");
+    setEditImageFile(null);
     if (editImageObjectUrl) URL.revokeObjectURL(editImageObjectUrl);
-    setEditImageObjectUrl(null);
+    setEditImageObjectUrl(event.image_url ?? null);
     setIsEditOpen(true);
   };
 
-  const handleEditSave = () => {
-    if (editId === null) return;
+  const handleEditSave = async () => {
+    if (editId === null || !clubId) return;
     if (!editTitle.trim() || !editDate.trim() || !editDescription.trim())
       return;
 
-    const image = editImageObjectUrl ?? (editImageUrl.trim() || null);
+    setIsSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("title", editTitle.trim());
+      formData.append("description", editDescription.trim());
+      formData.append(
+        "event_date",
+        new Date(`${editDate}T00:00:00`).toISOString(),
+      );
+      formData.append("status", editStatus);
+      if (editImageFile) formData.append("image", editImageFile);
 
-    setEvents((prev) =>
-      prev.map((event) =>
-        event.id === editId
-          ? {
-              ...event,
-              title: editTitle.trim(),
-              event_date: new Date(`${editDate}T00:00:00`).toISOString(),
-              status: editStatus,
-              description: editDescription.trim(),
-              image_url: image,
-              updated_at: new Date().toISOString(),
-            }
-          : event,
-      ),
-    );
-
-    setIsEditOpen(false);
-    setEditId(null);
-    resetEditForm();
+      const response = await fetch(
+        `/api/owner/clubs/${clubId}/events/${editId}`,
+        { method: "PATCH", body: formData },
+      );
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+      const { event } = (await response.json()) as { event: Event };
+      setEvents((prev) => prev.map((e) => (e.id === event.id ? event : e)));
+      setIsEditOpen(false);
+      setEditId(null);
+      resetEditForm();
+    } catch (error) {
+      console.error("Failed to update event:", error);
+      window.alert("Failed to update the event. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleNewImageFileChange = (
@@ -159,6 +197,7 @@ export default function EventsPage() {
     const file = event.target.files?.[0];
     if (!file) return;
     if (newImageObjectUrl) URL.revokeObjectURL(newImageObjectUrl);
+    setNewImageFile(file);
     setNewImageObjectUrl(URL.createObjectURL(file));
     event.target.value = "";
   };
@@ -169,9 +208,44 @@ export default function EventsPage() {
     const file = event.target.files?.[0];
     if (!file) return;
     if (editImageObjectUrl) URL.revokeObjectURL(editImageObjectUrl);
+    setEditImageFile(file);
     setEditImageObjectUrl(URL.createObjectURL(file));
     event.target.value = "";
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadEvents = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        const response = await fetch("/api/owner/events");
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+        const data = (await response.json()) as {
+          clubId: string | null;
+          events: Event[];
+        };
+        if (!cancelled) {
+          setEvents(data.events);
+          setClubId(data.clubId);
+        }
+      } catch (error) {
+        console.error("Failed to load owner events:", error);
+        if (!cancelled) setLoadError("Failed to load events. Please try again.");
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    loadEvents();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -180,15 +254,19 @@ export default function EventsPage() {
     };
   }, [newImageObjectUrl, editImageObjectUrl]);
 
-  const newImagePreview = newImageObjectUrl ?? (newImageUrl.trim() || null);
-  const editImagePreview = editImageObjectUrl ?? (editImageUrl.trim() || null);
+  const newImagePreview = newImageObjectUrl;
+  const editImagePreview = editImageObjectUrl;
 
   const canSubmitNew =
+    !isSubmitting &&
+    clubId !== null &&
     newTitle.trim().length > 0 &&
     newDate.trim().length > 0 &&
     newDescription.trim().length > 0;
 
   const canSubmitEdit =
+    !isSubmitting &&
+    clubId !== null &&
     editTitle.trim().length > 0 &&
     editDate.trim().length > 0 &&
     editDescription.trim().length > 0;
@@ -207,13 +285,28 @@ export default function EventsPage() {
           </p>
         </div>
 
-        <Button onClick={() => setIsAddOpen(true)} className="px-4">
+        <Button
+          onClick={() => setIsAddOpen(true)}
+          className="px-4"
+          disabled={!clubId}
+        >
           <Plus />
           Add Event
         </Button>
       </div>
 
-      {events.length === 0 ? (
+      {isLoading ? (
+        <div className="flex min-h-90 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30">
+          <p className="text-sm text-muted-foreground">Loading events…</p>
+        </div>
+      ) : loadError ? (
+        <div className="flex min-h-90 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-destructive/40 bg-destructive/5">
+          <h3 className="text-xl font-semibold text-foreground">
+            Couldn&apos;t load events
+          </h3>
+          <p className="text-sm text-muted-foreground">{loadError}</p>
+        </div>
+      ) : events.length === 0 ? (
         <div className="flex min-h-90 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30">
           <h3 className="text-xl font-semibold text-foreground">
             No events yet
@@ -416,14 +509,6 @@ export default function EventsPage() {
                 accept="image/*"
                 onChange={handleNewImageFileChange}
               />
-              <Input
-                placeholder="https://example.com/banner.jpg"
-                value={newImageUrl}
-                onChange={(event) => setNewImageUrl(event.target.value)}
-              />
-              <span className="text-xs text-muted-foreground">
-                Upload a file or paste an image URL.
-              </span>
               {newImagePreview && (
                 <div className="relative h-24 w-24 overflow-hidden rounded-md border border-border">
                   <Image
@@ -432,14 +517,15 @@ export default function EventsPage() {
                     width={96}
                     height={96}
                     className="h-full w-full object-cover"
+                    unoptimized
                   />
                   <button
                     type="button"
                     className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[10px] text-white"
                     onClick={() => {
                       if (newImageObjectUrl) URL.revokeObjectURL(newImageObjectUrl);
+                      setNewImageFile(null);
                       setNewImageObjectUrl(null);
-                      setNewImageUrl("");
                     }}
                   >
                     ×
@@ -545,14 +631,6 @@ export default function EventsPage() {
                 accept="image/*"
                 onChange={handleEditImageFileChange}
               />
-              <Input
-                placeholder="https://example.com/banner.jpg"
-                value={editImageUrl}
-                onChange={(event) => setEditImageUrl(event.target.value)}
-              />
-              <span className="text-xs text-muted-foreground">
-                Upload a file or paste an image URL.
-              </span>
               {editImagePreview && (
                 <div className="relative h-24 w-24 overflow-hidden rounded-md border border-border">
                   <Image
@@ -561,14 +639,15 @@ export default function EventsPage() {
                     width={96}
                     height={96}
                     className="h-full w-full object-cover"
+                    unoptimized
                   />
                   <button
                     type="button"
                     className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[10px] text-white"
                     onClick={() => {
                       if (editImageObjectUrl) URL.revokeObjectURL(editImageObjectUrl);
+                      setEditImageFile(null);
                       setEditImageObjectUrl(null);
-                      setEditImageUrl("");
                     }}
                   >
                     ×

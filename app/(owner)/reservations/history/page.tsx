@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -26,19 +26,85 @@ import {
   XCircle,
   LogIn,
 } from "lucide-react"
-import type { Reservation } from "@/lib/types"
-import { reservations as allReservations, tableMap, events } from "@/lib/mock-data-owner"
+import type { ClubTable, Event, Reservation } from "@/lib/types"
 
 type FilterStatus = "all" | "cancelled" | "checked_in"
 
 const PAGE_SIZE = 8
 
 export default function BookingHistoryPage() {
+  const [allReservations, setAllReservations] = useState<Reservation[]>([])
+  const [tables, setTables] = useState<ClubTable[]>([])
+  const [events, setEvents] = useState<Event[]>([])
+  const [clubId, setClubId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
   const [searchQuery, setSearchQuery] = useState("")
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all")
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [page, setPage] = useState(1)
+
+  const tableMap = new Map(tables.map((t) => [t.id, t]))
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadReservations = async () => {
+      setIsLoading(true)
+      setLoadError(null)
+      try {
+        const clubResponse = await fetch("/api/owner/club")
+        if (!clubResponse.ok) {
+          throw new Error(`Request failed with status ${clubResponse.status}`)
+        }
+        const { club } = (await clubResponse.json()) as { club: { id: string } | null }
+        if (!club) {
+          if (!cancelled) {
+            setClubId(null)
+            setAllReservations([])
+            setTables([])
+          }
+          return
+        }
+
+        const [reservationsResponse, eventsResponse] = await Promise.all([
+          fetch(`/api/owner/clubs/${club.id}/reservations`),
+          fetch("/api/owner/events"),
+        ])
+        if (!reservationsResponse.ok) {
+          throw new Error(`Request failed with status ${reservationsResponse.status}`)
+        }
+        const reservationsData = (await reservationsResponse.json()) as {
+          clubId: string
+          reservations: Reservation[]
+          tables: ClubTable[]
+        }
+        const eventsData = eventsResponse.ok
+          ? ((await eventsResponse.json()) as { events: Event[] })
+          : { events: [] }
+
+        if (!cancelled) {
+          setClubId(reservationsData.clubId)
+          setAllReservations(reservationsData.reservations)
+          setTables(reservationsData.tables)
+          setEvents(eventsData.events)
+        }
+      } catch (error) {
+        console.error("Failed to load reservation history:", error)
+        if (!cancelled) setLoadError("Failed to load reservations. Please try again.")
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+
+    loadReservations()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const historyStatuses: Reservation["status"][] = ["cancelled", "checked_in"]
   const historyReservations = allReservations.filter((r) =>
@@ -163,7 +229,24 @@ export default function BookingHistoryPage() {
         </div>
       </div>
 
-      {filteredReservations.length === 0 ? (
+      {isLoading ? (
+        <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30">
+          <p className="text-sm text-muted-foreground">Loading reservations…</p>
+        </div>
+      ) : loadError ? (
+        <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-destructive/40 bg-destructive/5">
+          <h3 className="text-lg font-semibold text-foreground">Couldn&apos;t load reservations</h3>
+          <p className="text-sm text-muted-foreground">{loadError}</p>
+        </div>
+      ) : !clubId ? (
+        <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30">
+          <Calendar className="h-8 w-8 text-muted-foreground" />
+          <h3 className="text-lg font-semibold text-foreground">No club registered yet</h3>
+          <p className="text-sm text-muted-foreground">
+            Register your club before booking history can appear here.
+          </p>
+        </div>
+      ) : filteredReservations.length === 0 ? (
         <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30">
           <Calendar className="h-8 w-8 text-muted-foreground" />
           <h3 className="text-lg font-semibold text-foreground">No bookings found</h3>
