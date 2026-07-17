@@ -12,6 +12,7 @@ import {
   type RouteContext,
 } from "@/lib/api/shared/errors"
 import type { Database } from "@/lib/db"
+import { sendReservationConfirmation } from "./confirmation"
 
 type ReservationRow = Database["public"]["Tables"]["reservations"]["Row"]
 type ReservationUpdate = Database["public"]["Tables"]["reservations"]["Update"]
@@ -127,7 +128,7 @@ export const updateReservation = handle(
       updates.table_id = String(body.table_id)
     }
 
-    const reservation = fromDb(
+    const reservation = fromDb<ReservationRow>(
       await supabaseAdmin
         .from("reservations")
         .update(updates)
@@ -135,6 +136,21 @@ export const updateReservation = handle(
         .select("*")
         .maybeSingle(),
     )
+
+    // Best-effort: only when THIS request transitioned the row into
+    // "confirmed" (not on a re-confirm of an already-confirmed row). A failure
+    // to email must never fail the confirm — the status change is the source
+    // of truth — so we swallow and log.
+    const didConfirm =
+      updates.status === "confirmed" && existing.status !== "confirmed"
+    if (didConfirm) {
+      try {
+        await sendReservationConfirmation(reservation)
+      } catch (error) {
+        console.error("Failed to send reservation confirmation email:", error)
+      }
+    }
+
     return Response.json({ reservation })
   },
 )
