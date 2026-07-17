@@ -39,13 +39,11 @@ These differ from what you likely have memorized. Check before writing code.
 
 ## Architecture
 
-`/` (`app/page.tsx`) is a bare redirect to `/dashboard`. All real screens live under the `(dashboard)` route group, whose layout (`app/(dashboard)/layout.tsx`) wraps children in `SidebarProvider` + `AppSidebar` + `SidebarInset`. Adding a page under `(dashboard)` gets the chrome for free.
+Two top-level route groups split the app by audience. `app/(user)/*` (`browse`, `club/[slug]`, `events`, `events/[id]`, `faq`, `privacy`, `termsOfService`) is the **public, unauthenticated** consumer surface — no layout chrome, no auth guard (see Route protection below). `app/(owner)/*` (`dashboard`, `club/details`, `club/layout`, `owner-events`, `reservations`) is the **authenticated venue-owner** surface, whose layout (`app/(owner)/layout.tsx`) wraps children in `SidebarProvider` + `AppSidebar` + `SidebarInset`. `/` (`app/page.tsx`) redirects into the owner dashboard; `(user)` routes are reached directly (e.g. a shared `/club/[slug]` link), not via that redirect.
 
-Navigation is data-driven: the `navGroups` array in `components/app-sidebar.tsx` is the single source of truth for sidebar structure. Adding a route means adding an entry there, not editing JSX. Active state uses `pathname.startsWith(url)` unless the item sets `exact: true` — so nested routes like `/finance/payouts` will light up their parent (`/finance`) too unless that parent is marked exact.
+Navigation within the owner shell is data-driven: the `navGroups` array in `components/app-sidebar.tsx` is the single source of truth for sidebar structure. Adding an owner route means adding an entry there, not editing JSX. Active state uses `pathname.startsWith(url)` unless the item sets `exact: true` — so nested routes like `/finance/payouts` will light up their parent (`/finance`) too unless that parent is marked exact.
 
-The page files under `(dashboard)` are still **scaffolds** — no live data fetching. Live data is not wired up: `lib/supabase.ts` exports a `createSupabaseClient()` factory (anon key), but nothing calls it yet and there is no env wiring. Adding the real data layer is greenfield work. The sidebar also links to `/settings`, which does not exist yet.
-
-The typed schema — the source of truth for every row shape — lives in **`lib/db.ts`** (the `Database` interface, 8 tables). UI mock data lives in **`lib/mock-data-owner.ts`** and **`lib/mock-data-user.ts`** (typed modules whose shapes mirror the `DB.md` tables); new pages should import from these rather than hardcoding arrays, and swap them for Supabase queries returning the same types once the data layer lands.
+Most owner pages and all `(user)` pages are live-wired to Supabase/the API layer (see below) — `lib/mock-data-owner.ts` and `lib/mock-data-user.ts` are mostly-superseded scaffold data that a few not-yet-wired owner screens (e.g. finance) still fall back to. The typed schema — the source of truth for every row shape — lives in **`lib/db.ts`** (the `Database` interface, 8 tables); new pages should fetch through the API layer / Supabase client and type against it rather than hardcoding arrays or reaching for the mock modules.
 
 ### Seeding the database
 
@@ -87,11 +85,13 @@ The owner club-details screen (`app/(owner)/club/details/page.tsx`, a client com
 
 ## Domain Context
 
-This is the Superadmin (God-Mode) portal for Otus — a Cebu nightclub reservation platform. It is a **separate repository** from the B2C/B2B consumer app but reads and writes the **same Supabase database**. Expect to need `SUPABASE_SERVICE_ROLE_KEY` to bypass RLS for cross-tenant reads.
+This repo is **both** the consumer (guest/end-user) app and the venue-owner portal for Otus — a Cebu nightclub reservation platform — in one Next.js app (see Architecture above for the `(user)`/`(owner)` split). It is a **separate repository** only from the superadmin (God-Mode) portal — token issuance, the global reservation ledger, and financial reconciliation live over there, not here — but both repos read and write the **same Supabase database**. Expect to need `SUPABASE_SERVICE_ROLE_KEY` to bypass RLS for cross-tenant/service-role reads.
 
-Three workflows define what this portal is for:
+Three workflows define what this repo is for:
 
-1. **B2B white-glove onboarding.** Venue owners cannot self-serve signup — an account exists only by redeeming a token a superadmin issued. The order is **owner first, club second**, and both steps after the first happen *in this repo*:
+1. **Guest browsing and booking (`(user)`, public, no account).** Anyone can browse published clubs (`/browse`, `GET /api/clubs`, `.eq("status", "active")` only), view a club's detail page and events, and book a table as a guest — `POST /api/reservations` has no auth guard and writes guest identity (`guest_name`/`guest_email`/`guest_contact`) directly onto the reservation row, since guests have no accounts (`Users.role` is `owner`/`admin` only). Guests can also look up their own reservation via `GET /api/reservations/[id]` with an `X-Guest-Email` header, and check in via a `qr_code_token`. None of this requires the onboarding/auth flow below — that's owner-only.
+
+2. **B2B white-glove onboarding (owner-only).** Venue owners cannot self-serve signup — an account exists only by redeeming a token a superadmin issued (elsewhere). The order is **owner first, club second**, and both steps after the first happen *in this repo*:
 
    1. A superadmin generates a secure one-time token in the superadmin portal. It is **not tied to any club** — it carries only an expiry.
    2. The token is handed to the venue manager out-of-band and redeemed **here** (`redeemVerificationToken`) to create their authenticated `owner` account. Redemption creates the user and marks the token `used`; it links no club, because none exists yet.
@@ -103,9 +103,7 @@ Three workflows define what this portal is for:
 
    **Clubs status lifecycle:** `draft` → `active` → `inactive`. A club is created by its **owner** as `draft` and is **hidden from all consumer surfaces** — `listClubs`/`getClub` in `lib/api/clubs/api.ts` filter `.eq("status", "active")`, so `draft` and `inactive` never surface. The owner fills in images, description, and hours, then publishes (`draft` → `active`) via `updateClub` (`requireClubOwner`) — *when* a venue is showcased is up to the owner, not the superadmin. `inactive` is a superadmin-only enforcement state (fraud offline); owners cannot set it.
 
-2. **Global reservation ledger.** A master view of every booking across every club, searchable by guest email, phone, or `qr_code_token`. Guest identity is denormalized onto the reservation row (`guest_name`, `guest_email`, `guest_contact`) specifically so bookings work for walk-ins and guests without accounts — do not assume a reservation joins to a user.
-
-3. **Financial reconciliation.** Track total PayMongo volume, compute the Otus platform commission, and surface the pending payout balance owed to each club.
+3. **Running the club day-to-day (owner-only).** Once registered, the owner manages their own club's details/images/floor plans/tables, creates and edits events, and works reservations for that club (confirm/decline/check-in). Guest identity is denormalized onto the reservation row (`guest_name`, `guest_email`, `guest_contact`) specifically so bookings work for walk-ins and guests without accounts — do not assume a reservation joins to a user. Everything here is scoped to `requireClubOwner`/the caller's own `club_id`; there is no cross-club view in this repo — that (plus financial reconciliation of PayMongo volume/commission/payouts) is the superadmin portal's job.
 
 ### Schema
 

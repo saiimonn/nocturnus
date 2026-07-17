@@ -1,12 +1,13 @@
-# Otus Superadmin Portal
+# Otus
 
-The Superadmin (God-Mode) portal for **Otus**, a Cebu nightclub reservation platform. This is a separate repository from the B2C/B2B consumer app, but it reads and writes the **same Supabase database**.
+The consumer and venue-owner app for **Otus**, a Cebu nightclub reservation platform. It is a separate repository from the superadmin (God-Mode) portal, but reads and writes the **same Supabase database**.
 
-This portal exists for three core workflows:
+This single Next.js app serves two audiences:
 
-1. **B2B white-glove onboarding** — superadmins issue one-time tokens that let venue owners self-register an account and then their own club (owner first, club second).
-2. **Global reservation ledger** — a cross-club view of every booking, searchable by guest email, phone, or QR code token.
-3. **Financial reconciliation** — tracking PayMongo volume, platform commission, and pending payouts per club.
+1. **End users (guests, public, no account)** — browse clubs, view events, and book a table as a guest. Guest reservations require no account: identity (`guest_name`/`guest_email`/`guest_contact`) is captured directly on the reservation.
+2. **Venue owners (authenticated)** — onboard by redeeming a one-time token (issued elsewhere, by a superadmin) to create an account, then register and run their own club here: details, images, floor plans, tables, events, and reservation management (owner first, club second).
+
+Cross-club administration — token issuance, the global reservation ledger, and financial reconciliation — lives in the separate superadmin portal, not here.
 
 For full architecture, data-layer, auth, and domain details, see [`AGENTS.md`](./AGENTS.md) — it is the single source of truth for how this codebase works and must be kept up to date with every feature change.
 
