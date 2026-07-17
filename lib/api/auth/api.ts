@@ -1,4 +1,5 @@
 import { cookies } from "next/headers"
+import { createHash } from "node:crypto"
 import bcrypt from "bcryptjs"
 import { supabaseAdmin } from "@/lib/supabase-admin"
 import {
@@ -68,6 +69,36 @@ export const logout = handle(async () => {
   const cookieStore = await cookies()
   cookieStore.set(SESSION_COOKIE, "", { ...sessionCookieOptions, maxAge: 0 })
   return Response.json({ ok: true })
+})
+
+function hashToken(plaintext: string): string {
+  return createHash("sha256").update(plaintext).digest("hex")
+}
+
+export const checkVerificationToken = handle(async (request) => {
+  const body = await readJson(request)
+  requireFields(body, ["token"])
+  const tokenHash = hashToken(String(body.token))
+
+  const { data: record, error } = await supabaseAdmin
+    .from("owner_verification_tokens")
+    .select("used, revoked, expires_at")
+    .eq("token_hash", tokenHash)
+    .maybeSingle()
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  if (
+    !record ||
+    record.used ||
+    record.revoked ||
+    new Date(record.expires_at) <= new Date()
+  ) {
+    throw unauthorized("Invalid or expired token")
+  }
+
+  return Response.json({ valid: true })
 })
 
 export const redeemVerificationToken = handle(async (request) => {
