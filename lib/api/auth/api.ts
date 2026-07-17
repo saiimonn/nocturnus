@@ -113,12 +113,19 @@ export const redeemVerificationToken = handle(async (request) => {
   const body = await readJson(request)
   requireFields(body, ["token", "full_name", "email", "password"])
 
+  if (typeof body.full_name !== "string" || body.full_name.trim() === "") {
+    throw badRequest("full_name must be a non-empty string")
+  }
+  if (typeof body.email !== "string" || body.email.trim() === "") {
+    throw badRequest("email must be a non-empty string")
+  }
+
   const password = String(body.password)
   if (password.length < 8) {
     throw badRequest("Password must be at least 8 characters")
   }
 
-  const email = String(body.email).trim().toLowerCase()
+  const email = body.email.trim().toLowerCase()
   const { data: existingUser, error: existingUserError } = await supabaseAdmin
     .from("users")
     .select("id")
