@@ -39,16 +39,19 @@ export async function optionalImageFile(
   return requireImageFile(form, field)
 }
 
-// Uploads under `${pathPrefix}/${uuid}.<ext>` and returns the bucket's public
-// URL. Callers pass a prefix that scopes the file to its owning record (e.g.
-// `clubs/{clubId}/gallery`) — the random suffix just avoids collisions within
-// that prefix, it isn't itself a meaningful identifier.
-export async function uploadClubMedia(pathPrefix: string, file: File): Promise<string> {
-  const extension = file.name.includes(".") ? file.name.split(".").pop() : undefined
-  const path = `${pathPrefix}/${crypto.randomUUID()}${extension ? `.${extension}` : ""}`
+// Uploads raw bytes under `${pathPrefix}/${uuid}.${extension}` and returns the
+// bucket's public URL. Used for server-generated media (e.g. a reservation QR
+// PNG) that never arrives as a multipart File.
+export async function uploadClubMediaBytes(
+  pathPrefix: string,
+  bytes: Buffer | Uint8Array,
+  contentType: string,
+  extension: string,
+): Promise<string> {
+  const path = `${pathPrefix}/${crypto.randomUUID()}.${extension}`
   const { error } = await supabaseAdmin.storage
     .from(CLUB_MEDIA_BUCKET)
-    .upload(path, file, { contentType: file.type })
+    .upload(path, bytes, { contentType })
   if (error) {
     throw new Error(error.message)
   }
@@ -56,4 +59,14 @@ export async function uploadClubMedia(pathPrefix: string, file: File): Promise<s
     data: { publicUrl },
   } = supabaseAdmin.storage.from(CLUB_MEDIA_BUCKET).getPublicUrl(path)
   return publicUrl
+}
+
+// Uploads under `${pathPrefix}/${uuid}.<ext>` and returns the bucket's public
+// URL. Callers pass a prefix that scopes the file to its owning record (e.g.
+// `clubs/{clubId}/gallery`) — the random suffix just avoids collisions within
+// that prefix, it isn't itself a meaningful identifier.
+export async function uploadClubMedia(pathPrefix: string, file: File): Promise<string> {
+  const extension = file.name.includes(".") ? file.name.split(".").pop()! : "bin"
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  return uploadClubMediaBytes(pathPrefix, bytes, file.type, extension)
 }
