@@ -4,34 +4,56 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, MapPin } from "lucide-react";
 
-type VenueType = "NIGHTCLUB" | "LOUNGE" | "ROOFTOP";
-
 export default function ClubOwnerRegisterPage() {
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [inviteToken, setInviteToken] = useState("");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [clubName, setClubName] = useState("");
-  const [location, setLocation] = useState("");
+  const [address, setAddress] = useState("");
   const [description, setDescription] = useState("");
-  const [venueType, setVenueType] = useState<VenueType>("NIGHTCLUB");
+
+  const handleContinueFromStep2 = () => {
+    if (password !== confirmPassword) {
+      setPasswordError("Passwords do not match.");
+      return;
+    }
+    setPasswordError("");
+    setStep(3);
+  };
 
   return (
     <div className = "relative min-h-screen w-full overflow-hidden bg-[#0a0a0a] text-white">
       <div className = "relative z-10 flex flex-col p-8 md:px-16">
         <div className = "flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors">
-            <ArrowLeft className="size-4" />
-            Back
-          </Link>
+          {step === 1 ? (
+            <Link href="/" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors">
+              <ArrowLeft className="size-4" />
+              Back
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setStep((s) => (s === 3 ? 2 : 1))}
+              className = "flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="size-4" />
+              Back
+            </button>
+          )}
           <div className = "flex items-center gap-2 text-xs text-gray-400">
             <span>STEP</span>
             <span className = "rounded bg-[#1a1a1a] px-2 py-1 font-mono text-white">
-              { step === 1 ? "1" : "2" }
+              {step}
             </span>
             <span />
-            <span className = "font-mono">02</span>
+            <span className = "font-mono">03</span>
           </div>
         </div>
 
@@ -47,7 +69,7 @@ export default function ClubOwnerRegisterPage() {
                 </p>
 
                 <div className = "mt-10">
-                  <label className = "text-xs uppercase tracking-widest text-gray-500">
+                  <label className = "text-xs uppercase tracking-widest text-gray-500 pr-4">
                     Invite Token
                   </label>
                   <input
@@ -76,23 +98,31 @@ export default function ClubOwnerRegisterPage() {
                   </Link>
                 </p>
               </>
-            ) : (
+            ) : step === 2 ? (
                 <>
                   <span className = "inline-block rounded border border-[#2a2a2a] px-3 py-1 text-[11px] uppercase tracking-widest text-gray-400">
-                    Step 02/02
+                    Step 02/03
                   </span>
 
                   <h1 className = "mt-4 font-serif text-3xl font-semibold leading-tight md:text-4xl">
-                    Account &amp; Club Details
+                    User Details
                   </h1>
                   <p className = "mt-3 text-sm leading-relaxed text-gray-400">
-                    Finalize your credentials and define your venue&apos;s identity in the network.
+                    Tell us who you are and set up your login credentials.
                   </p>
 
                   <div className = "mt-10">
-                    <h2 className = "border-b border-[#2a2a2a] pb-3 text-sm font-semibold">
-                      Credentials
-                    </h2>
+                    <div>
+                      <label className = "text-xs uppercase tracking-widest text-gray-500">
+                        Full Name
+                      </label>
+                      <input
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Juan Dela Cruz"
+                        className = "mt-2 h-11 w-full rounded-lg border border-[#2a2a2a] bg-[#141414] px-4 text-sm text-white placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
+                      />
+                    </div>
 
                     <div className = "mt-5">
                       <label className = "text-xs uppercase tracking-widest text-gray-500">
@@ -103,6 +133,19 @@ export default function ClubOwnerRegisterPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="owner@venue.com"
+                        className = "mt-2 h-11 w-full rounded-lg border border-[#2a2a2a] bg-[#141414] px-4 text-sm text-white placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className = "mt-5">
+                      <label className = "text-xs uppercase tracking-widest text-gray-500">
+                        Contact Number <span className = "normal-case text-gray-600">(optional)</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={contactNumber}
+                        onChange={(e) => setContactNumber(e.target.value)}
+                        placeholder="+63 9XX XXX XXXX"
                         className = "mt-2 h-11 w-full rounded-lg border border-[#2a2a2a] bg-[#141414] px-4 text-sm text-white placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
                       />
                     </div>
@@ -136,12 +179,63 @@ export default function ClubOwnerRegisterPage() {
                         Minimum of 8 characters, including alphanumeric.
                       </p>
                     </div>
-                  </div>
-
-                  <div className = "mt-10">
-                    <h2 className="border-b border-[#2a2a2a] pb-3 text-sm font-semibold">Venue Information</h2>
 
                     <div className = "mt-5">
+                      <label className = "text-xs uppercase tracking-widest text-gray-500">
+                        Confirm Password
+                      </label>
+
+                      <div className = "relative mt-2">
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className = "h-11 w-full rounded-lg border border-[#2a2a2a] bg-[#141414] px-4 pr-11 text-sm text-white placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword((v) => !v)}
+                          className = "absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className = "size-4" />
+                          ) : (
+                              <Eye className = "size-4" />
+                          )}
+                        </button>
+                      </div>
+                      {passwordError && (
+                        <p className = "mt-2 text-xs text-red-400">
+                          {passwordError}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleContinueFromStep2}
+                    className = "mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white text-sm font-medium text-black transition-colors hover:bg-gray-100"
+                  >
+                    Continue
+                    <ArrowRight className = "size-4" />
+                  </button>
+                </>
+            ) : (
+                <>
+                  <span className = "inline-block rounded border border-[#2a2a2a] px-3 py-1 text-[11px] uppercase tracking-widest text-gray-400">
+                    Step 03/03
+                  </span>
+
+                  <h1 className = "mt-4 font-serif text-3xl font-semibold leading-tight md:text-4xl">
+                    Club Registration
+                  </h1>
+                  <p className = "mt-3 text-sm leading-relaxed text-gray-400">
+                    Define your venue&apos;s identity in the network.
+                  </p>
+
+                  <div className = "mt-10">
+                    <div>
                       <label className = "text-xs uppercase tracking-widest text-gray-50">
                         Club Name
                       </label>
@@ -155,14 +249,14 @@ export default function ClubOwnerRegisterPage() {
 
                     <div className = "mt-5">
                       <label className = "text-xs uppercase tracking-widest text-gray-50">
-                        Location
+                        Address
                       </label>
                       <div className = "relative mt-2">
                         <MapPin className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gray-600" />
                         <input
-                          value={location}
-                          onChange={(e) => setLocation(e.target.value)}
-                          placeholder="City, Neighborhood or Address"
+                          value={address}
+                          onChange={(e) => setAddress(e.target.value)}
+                          placeholder="Street, City, Province"
                           className = "h-11 w-full rounded-lg border border-[#2a2a2a] bg-[#141414] pl-11 pr-4 text-sm text-white placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
                         />
                       </div>
@@ -170,27 +264,7 @@ export default function ClubOwnerRegisterPage() {
 
                     <div className = "mt-5">
                       <label className = "text-xs uppercase tracking-widest text-gray-500">
-                        Venue Type
-                      </label>
-                      <div className = "mt-2 grid grid-cols-3 gap-3">
-                        {(["NIGHTCLUB", "LOUNGE", "ROOFTOP"] as VenueType[]).map(
-                          (type) => (
-                            <button
-                              key={type}
-                              type="button"
-                              onClick={() => setVenueType(type)}
-                              className = {`flex h-10 items-center justify-center rounded-lg border text-xs tracking-wide transition-colors ${venueType === type ? "border-white bg-white text-black" : "border-[#2a2a2a] bg-[#141414] text-gray-300 hover:border-gray-500"}`}
-                            >
-                              {type}
-                            </button>
-                          )
-                        )}
-                      </div>
-                    </div>
-
-                    <div className = "mt-5">
-                      <label className = "text-xs uppercase tracking-widest text-gray-500">
-                        Description
+                        Description <span className = "normal-case text-gray-600">(optional)</span>
                       </label>
                       <textarea
                         value={description}
