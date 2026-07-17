@@ -51,9 +51,9 @@ async function buildClubContext(club: ClubRow): Promise<string> {
 
   const { data: events } = await supabaseAdmin
     .from("events")
-    .select("title, event_date, status")
+    .select("title, event_date")
     .eq("club_id", club.id)
-    .in("status", ["published", "draft"])
+    .eq("status", "published")
     .gte("event_date", new Date().toISOString())
     .order("event_date", { ascending: true })
     .limit(5)
