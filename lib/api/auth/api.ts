@@ -3,9 +3,11 @@ import { createHash } from "node:crypto"
 import bcrypt from "bcryptjs"
 import { supabaseAdmin } from "@/lib/supabase-admin"
 import {
+  badRequest,
+  conflict,
   forbidden,
+  fromDb,
   handle,
-  notImplemented,
   readJson,
   requireFields,
   unauthorized,
@@ -15,6 +17,12 @@ import {
   createSession,
   sessionCookieOptions,
 } from "@/lib/api/auth/session"
+import type { Database } from "@/lib/db"
+
+type NewUserRow = Pick<
+  Database["public"]["Tables"]["users"]["Row"],
+  "id" | "full_name" | "email" | "role"
+>
 
 // Precomputed bcrypt hash of a random string. Compared against when no user is
 // found so the response timing does not reveal whether the email exists.
@@ -104,5 +112,63 @@ export const checkVerificationToken = handle(async (request) => {
 export const redeemVerificationToken = handle(async (request) => {
   const body = await readJson(request)
   requireFields(body, ["token", "full_name", "email", "password"])
-  throw notImplemented("Owner verification token redemption is not implemented yet")
+
+  const password = String(body.password)
+  if (password.length < 8) {
+    throw badRequest("Password must be at least 8 characters")
+  }
+
+  const email = String(body.email).trim().toLowerCase()
+  const { data: existingUser, error: existingUserError } = await supabaseAdmin
+    .from("users")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle()
+  if (existingUserError) {
+    throw new Error(existingUserError.message)
+  }
+  if (existingUser) {
+    throw conflict("An account with this email already exists")
+  }
+
+  const tokenHash = hashToken(String(body.token))
+  const nowIso = new Date().toISOString()
+  const { data: claimed, error: claimError } = await supabaseAdmin
+    .from("owner_verification_tokens")
+    .update({ used: true })
+    .eq("token_hash", tokenHash)
+    .eq("used", false)
+    .eq("revoked", false)
+    .gt("expires_at", nowIso)
+    .select("id")
+    .maybeSingle()
+  if (claimError) {
+    throw new Error(claimError.message)
+  }
+  if (!claimed) {
+    throw unauthorized("Invalid or already-used token")
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10)
+  const user = fromDb<NewUserRow>(
+    await supabaseAdmin
+      .from("users")
+      .insert({
+        full_name: String(body.full_name).trim(),
+        email,
+        contact_number:
+          (body.contact_number as string | undefined)?.trim() || null,
+        password_hash: passwordHash,
+        role: "owner",
+        status: "active",
+      })
+      .select("id, full_name, email, role")
+      .single(),
+  )
+
+  const token = await createSession({ userId: user.id, role: "owner" })
+  const cookieStore = await cookies()
+  cookieStore.set(SESSION_COOKIE, token, sessionCookieOptions)
+
+  return Response.json({ user }, { status: 201 })
 })
