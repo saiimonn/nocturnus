@@ -11,11 +11,16 @@ alter table public.users
 alter table public.users
   add column if not exists club_id uuid references public.clubs(id) on delete cascade;
 
--- An employee must always belong to a club; owners/admins must not.
+-- An employee must always belong to a club; owners/admins must not. Both
+-- directions are enforced: club_id is required when role = 'club_employee'
+-- and forbidden (must be null) for every other role.
 alter table public.users drop constraint if exists users_club_id_role_check;
 alter table public.users
   add constraint users_club_id_role_check
-  check (role <> 'club_employee' or club_id is not null);
+  check (
+    (role = 'club_employee' and club_id is not null)
+    or (role <> 'club_employee' and club_id is null)
+  );
 
 create index if not exists users_club_id_idx on public.users (club_id);
 

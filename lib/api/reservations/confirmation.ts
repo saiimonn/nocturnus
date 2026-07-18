@@ -18,6 +18,21 @@ export async function sendReservationConfirmation(
     throw new Error(`Reservation ${reservation.id} has no qr_code_token to encode`)
   }
 
+  // generateQrPng (lib/qr.ts) throws if NEXT_PUBLIC_APP_URL is unset, and this
+  // whole function is wrapped in a swallowed try/catch by the caller
+  // (updateReservation) so a confirm never fails because of email. That means
+  // an unset var otherwise fails completely silently to the guest, with only
+  // a generic log line for the operator to go on. Fail loudly and specifically
+  // here so `console.error` in the caller names the actual cause.
+  if (!process.env.NEXT_PUBLIC_APP_URL) {
+    throw new Error(
+      "NEXT_PUBLIC_APP_URL is not set — cannot build the QR check-in link, so the guest " +
+        "confirmation email was NOT sent. NEXT_PUBLIC_APP_URL is inlined at BUILD time; " +
+        "setting it only at runtime after the app is already built will not fix this — " +
+        "it must be present when `npm run build` runs, then the app rebuilt/redeployed.",
+    )
+  }
+
   const { data: club, error: clubError } = await supabaseAdmin
     .from("clubs")
     .select("name")

@@ -75,7 +75,9 @@ export const listEmployees = handle(async () => {
       .order("created_at", { ascending: false }),
   )
 
-  // Never select token_hash. Only live invites are of interest.
+  // Never select token_hash. Only live (unused, unrevoked, unexpired) invites
+  // are of interest — an expired invite is not "pending," it just hasn't been
+  // cleaned up yet.
   const invites = fromDb(
     await supabaseAdmin
       .from("club_employee_invites")
@@ -83,6 +85,7 @@ export const listEmployees = handle(async () => {
       .eq("club_id", clubId)
       .eq("used", false)
       .eq("revoked", false)
+      .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false }),
   )
 
@@ -122,6 +125,7 @@ export const inviteEmployee = handle(async (request) => {
     .eq("email", email)
     .eq("used", false)
     .eq("revoked", false)
+    .gt("expires_at", new Date().toISOString())
     .maybeSingle()
   if (liveInviteError) {
     throw new Error(liveInviteError.message)
@@ -132,6 +136,12 @@ export const inviteEmployee = handle(async (request) => {
 
   const plaintext = randomBytes(32).toString("base64url")
   const expiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000)
+
+  // Build anything that can throw BEFORE inserting the row. appUrl() throwing
+  // after the insert would leave a live invite with a plaintext token nobody
+  // has, and the partial unique index would then block re-inviting the
+  // address until someone finds and revokes the orphan.
+  const registerUrl = `${appUrl()}/auth/employee/register?token=${plaintext}`
 
   const invite = fromDb(
     await supabaseAdmin
@@ -149,8 +159,6 @@ export const inviteEmployee = handle(async (request) => {
       // to `never` for this table once the file has multiple such calls.
       .single<{ id: string; email: string; expires_at: string; created_at: string }>(),
   )
-
-  const registerUrl = `${appUrl()}/auth/employee/register?token=${plaintext}`
 
   // Unlike the reservation confirmation — which is deliberately best-effort —
   // a failed invite send must fail the request: a silently-unsent invite looks

@@ -42,7 +42,7 @@ Core identity table for platform users. `owner`, `admin`, and `club_employee` ro
 | `password_hash` | `varchar` | NO NULL | Bcrypt-hashed password. |
 | `role` | `varchar` | NO NULL | Accepts: `owner`, `admin`, or `club_employee`. |
 | `status` | `varchar` | NO NULL, DEFAULT `active` | Accepts: `active`, `suspended`. A superadmin sets `suspended` to lock out a compromised or fraudulent account without deleting it. |
-| `club_id` | `uuid` | FK, NULLABLE | References `Clubs.id`. The venue a `club_employee` is scoped to; always `NULL` for `owner`/`admin`. Enforced by the `users_club_id_role_check` constraint: `role <> 'club_employee' OR club_id IS NOT NULL` — an employee must always belong to a club, and an owner/admin must not have one set. |
+| `club_id` | `uuid` | FK, NULLABLE | References `Clubs.id`. The venue a `club_employee` is scoped to; always `NULL` for `owner`/`admin`. Enforced by the `users_club_id_role_check` constraint: `(role = 'club_employee' AND club_id IS NOT NULL) OR (role <> 'club_employee' AND club_id IS NULL)` — an employee must always belong to a club, and an owner/admin must not have one set, both directions enforced at the database level. |
 | `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
 | `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
 

@@ -12,7 +12,7 @@ Complete REST API surface for Otus (Cebu Nightclub Reservation System). See `DB.
 ## Authentication
 
 - **Public routes:** No auth required (guest browsing, reservation creation, guest reservation lookup). `POST /api/reservations/checkin` is grouped with the public reservation routes below but is **not** public — it requires a `club_employee` session, see its entry.
-- **Owner/admin routes:** Require Supabase Auth session (not yet wired; currently return `501 Not Implemented`). Will be passed via `Authorization: Bearer <token>` header once `@supabase/ssr` session layer is built.
+- **Owner/admin routes:** Require a session, verified via a custom-signed JWT (`jose`, HS256) carried in an `HttpOnly` cookie named `otus_session` — not Supabase Auth, and not a bearer token. See `AGENTS.md`'s Authentication section for the full session contract.
 
 ## Public Routes (Guest-facing)
 
@@ -288,16 +288,17 @@ Door staff scan a guest's QR code (which encodes `/scan/{token}`, not a bare tok
 ```
 
 **Errors:**
-- `401` if not signed in as a `club_employee`
+- `401` if there is no session at all
+- `403` if the session is valid but not a `club_employee` (`requireEmployee()` returns 403 for a valid non-employee session, 401 only when there is no session)
 - `400` if `qr_code_token` missing
 - `404` if token doesn't match any reservation **belonging to the caller's club** — a token valid at another club also 404s here, so the response never discloses that the code works elsewhere
 - `409` if reservation is already checked in or not in `confirmed` status
 
 ---
 
-## Owner/Admin Routes (Authenticated — Currently `501 Not Implemented`)
+## Owner/Admin Routes (Authenticated)
 
-All owner routes require Supabase Auth session (header: `Authorization: Bearer <token>`). Currently throw `501 Not Implemented` until auth is wired.
+All owner routes require a valid session, verified from the signed-JWT `otus_session` `HttpOnly` cookie — not a Supabase Auth session, and not an `Authorization: Bearer <token>` header. See `AGENTS.md`'s Authentication section.
 
 ### Authentication
 

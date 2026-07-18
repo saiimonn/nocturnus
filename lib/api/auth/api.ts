@@ -268,12 +268,18 @@ export const redeemEmployeeInvite = handle(async (request) => {
   }
 
   // Atomically claim the invite before creating the user, so a losing race
-  // never produces a duplicate account. Same pattern as the owner flow.
+  // never produces a duplicate account. Same pattern as the owner flow
+  // (redeemVerificationToken): re-assert used = false, revoked = false, and
+  // expires_at > now inside the UPDATE itself, not just in the earlier SELECT
+  // — otherwise an owner revoking the invite in the window between this
+  // handler's SELECT and UPDATE would not stop the account being created.
   const { data: claimed, error: claimError } = await supabaseAdmin
     .from("club_employee_invites")
     .update({ used: true })
     .eq("id", invite.id)
     .eq("used", false)
+    .eq("revoked", false)
+    .gt("expires_at", new Date().toISOString())
     .select("id")
     .maybeSingle()
   if (claimError) {

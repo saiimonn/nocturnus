@@ -147,7 +147,10 @@ export const updateReservation = handle(
       try {
         await sendReservationConfirmation(reservation)
       } catch (error) {
-        console.error("Failed to send reservation confirmation email:", error)
+        console.error(
+          `Failed to send reservation confirmation email for reservation ${reservation.id}:`,
+          error,
+        )
       }
     }
 
@@ -205,16 +208,28 @@ export const checkinReservation = handle(async (request) => {
     throw conflict(`A ${existing.status} reservation cannot be checked in`)
   }
 
-  const reservation = fromDb(
-    await supabaseAdmin
-      .from("reservations")
-      .update({ status: "checked_in" })
-      .eq("id", existing.id)
-      .select("id, status, guest_name, party_size, reservation_date")
-      .maybeSingle<
-        Pick<ReservationRow, "id" | "status" | "guest_name" | "party_size" | "reservation_date">
-      >(),
-  )
+  // Re-assert status = confirmed in the UPDATE itself, not just the read
+  // above: two simultaneous scans of the same QR both pass the read check,
+  // but only one may win the write. The losing request's UPDATE then matches
+  // no row (data comes back null with no error), which we turn into the same
+  // "already checked in" 409 the loser would have gotten had it lost the race
+  // more visibly, rather than a confusing 404/500.
+  const { data: updated, error: updateError } = await supabaseAdmin
+    .from("reservations")
+    .update({ status: "checked_in" })
+    .eq("id", existing.id)
+    .eq("status", "confirmed")
+    .select("id, status, guest_name, party_size, reservation_date")
+    .maybeSingle<
+      Pick<ReservationRow, "id" | "status" | "guest_name" | "party_size" | "reservation_date">
+    >()
+  if (updateError) {
+    throw new Error(updateError.message)
+  }
+  if (!updated) {
+    throw conflict("This reservation has already been checked in")
+  }
+  const reservation = updated
 
   // Resolve display context for the door screen. Neither lookup is allowed to
   // fail the check-in — the guest is already through at this point.
