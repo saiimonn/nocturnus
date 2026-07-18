@@ -194,6 +194,15 @@ export const checkinReservation = handle(async (request) => {
     .maybeSingle()
 
   if (error) {
+    // qr_code_token is a Postgres uuid column. A scanned code that isn't a
+    // well-formed UUID (a loyalty card, a parking stub, a damaged scan) makes
+    // Postgres reject the comparison with 22P02 (invalid_text_representation)
+    // rather than simply matching no rows. To the doorperson, a malformed
+    // code and an unknown code are the same situation, so both are reported
+    // as not-found instead of leaking a raw database error as a 500.
+    if (error.code === "22P02") {
+      throw notFound("No reservation matches that code")
+    }
     throw new Error(error.message)
   }
   // A token from another venue is reported as not-found rather than forbidden,
