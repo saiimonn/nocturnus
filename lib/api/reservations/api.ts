@@ -42,8 +42,12 @@ export const createReservation = handle(async (request) => {
     throw badRequest("party_size must be a positive integer")
   }
 
+  // Service-role client, not the anon one: guests hold only the "Anyone can
+  // create reservations" INSERT policy and no SELECT policy on reservations,
+  // so an insert that reads the new row back (which we need, to return it)
+  // would be rejected by RLS on the RETURNING clause.
   const reservation = fromDb(
-    await supabase
+    await supabaseAdmin
       .from("reservations")
       .insert({
         table_id: String(body.table_id),

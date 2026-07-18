@@ -168,6 +168,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
 
       <div className="px-8 pb-16 md:px-16">
         <VenueBooking
+          clubId={club.id}
           venueName={club.name}
           tables={tables ?? []}
           floorplanLabels={primaryFloorPlan?.labels ?? undefined}
