@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase-admin"
 import { uploadClubMediaBytes } from "@/lib/api/shared/storage"
 import { generateQrPng } from "@/lib/qr"
-import { sendReservationEmail } from "@/lib/email/client"
+import { sendEmail } from "@/lib/email/client"
 import ReservationConfirmed from "@/emails/reservation-confirmed"
 import type { Database } from "@/lib/db"
 
@@ -40,7 +40,7 @@ export async function sendReservationConfirmation(
     "png",
   )
 
-  await sendReservationEmail({
+  await sendEmail({
     to: reservation.guest_email,
     subject: `Your reservation at ${club?.name ?? "the club"} is confirmed`,
     react: ReservationConfirmed({
