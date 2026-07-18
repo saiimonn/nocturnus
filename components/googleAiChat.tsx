@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, type FormEvent } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { MessageCircle, X, Sparkles, SendHorizonal, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,10 @@ const starterMessages: Message[] = [
   },
 ];
 
+// The client/server split below is fixed for the life of the page, so this
+// store never has to notify anyone of a change.
+const subscribeToNothing = () => () => {};
+
 export function GoogleAiChat({
   clubId,
   title = "The Concierge",
@@ -44,6 +48,14 @@ export function GoogleAiChat({
   const inlineScrollRef = useRef<HTMLDivElement>(null);
   const modalScrollRef = useRef<HTMLDivElement>(null);
   const floatingScrollRef = useRef<HTMLDivElement>(null);
+  // createPortal needs document.body, which doesn't exist while this component
+  // renders on the server. Gate the portal on a client mount so the inline
+  // variant (used on club pages) server-renders instead of throwing.
+  const isMounted = useSyncExternalStore(
+    subscribeToNothing,
+    () => true,
+    () => false,
+  );
 
   useEffect(() => {
     inlineScrollRef.current?.scrollTo({ top: inlineScrollRef.current.scrollHeight });
@@ -179,7 +191,7 @@ export function GoogleAiChat({
           </form>
         </div>
 
-        {createPortal(
+        {isMounted && createPortal(
           <div
             className={`fixed inset-0 z-[100] flex items-stretch justify-end transition-opacity duration-300 ${
               fullscreen ? "opacity-100" : "pointer-events-none opacity-0"

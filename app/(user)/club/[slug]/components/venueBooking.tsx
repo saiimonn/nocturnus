@@ -2,10 +2,11 @@
 
 import { useState, useCallback } from 'react'
 import FloorplanViewer, { FloorplanFullscreen } from './floorplanViewer'
-import ReservationForm from './reservationForm'
+import ReservationForm, { type ReservationSubmitResult } from './reservationForm'
 import type { ClubTable, FloorPlanLabel } from '@/lib/types'
 
 interface VenueBookingProps {
+  clubId: string
   venueName: string
   tables?: ClubTable[]
   floorplanLabels?: FloorPlanLabel[]
@@ -13,6 +14,7 @@ interface VenueBookingProps {
 }
 
 export default function VenueBooking({
+  clubId,
   venueName,
   tables,
   floorplanLabels,
@@ -25,22 +27,48 @@ export default function VenueBooking({
     setSelectedTable((prev) => (prev?.id === table.id ? null : table))
   }, [])
 
-  const handleSubmit = useCallback((data: {
+  const handleSubmit = useCallback(async (data: {
     name: string
     email: string
     phone: string
     partySize: number
     date: string
     tableId: string
-  }) => {
-    console.log('Reservation:', {
-      ...data,
-      venue: venueName,
-      table: tables?.find((t) => t.id === data.tableId)?.label,
-    })
-    alert(`Reservation request submitted for ${tables?.find((t) => t.id === data.tableId)?.label ?? 'table'}! (Demo — no backend)`)
-    setSelectedTable(null)
-  }, [venueName, tables])
+  }): Promise<ReservationSubmitResult> => {
+    try {
+      const response = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          club_id: clubId,
+          table_id: data.tableId,
+          // reservation_date is a timestamptz, but the form only collects a
+          // day. Pin it to UTC midnight so every viewer resolves it to the
+          // date the guest actually picked.
+          reservation_date: `${data.date}T00:00:00Z`,
+          guest_name: data.name,
+          guest_email: data.email,
+          guest_contact: data.phone,
+          party_size: data.partySize,
+        }),
+      })
+
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        return {
+          ok: false,
+          message: payload?.message ?? 'Could not submit your request. Please try again.',
+        }
+      }
+
+      // The table stays selected on purpose: the form renders its success
+      // message in the selected-table panel, which would unmount if we cleared
+      // the selection here.
+      return { ok: true, message: 'Request sent — the venue will confirm by email.' }
+    } catch {
+      return { ok: false, message: 'Network error. Please check your connection and try again.' }
+    }
+  }, [clubId])
 
   if (!tables || tables.length === 0) {
     return (

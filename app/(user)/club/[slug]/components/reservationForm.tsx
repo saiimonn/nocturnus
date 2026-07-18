@@ -5,6 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { ClubTable } from '@/lib/types'
 
+export interface ReservationSubmitResult {
+  ok: boolean
+  message: string
+}
+
 interface ReservationFormProps {
   selectedTable: ClubTable | null
   venueName: string
@@ -15,7 +20,7 @@ interface ReservationFormProps {
     partySize: number
     date: string
     tableId: string
-  }) => void
+  }) => Promise<ReservationSubmitResult>
 }
 
 const categoryAccent: Record<string, string> = {
@@ -31,24 +36,43 @@ export default function ReservationForm({ selectedTable, venueName, onSubmit }: 
   const [phone, setPhone] = useState('')
   const [partySize, setPartySize] = useState('')
   const [date, setDate] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  // Tagged with the table it belongs to, so a result from the previous table
+  // doesn't linger over a new selection — cheaper than resetting on change.
+  const [feedback, setFeedback] = useState<(ReservationSubmitResult & { tableId: string }) | null>(
+    null,
+  )
+  const visibleFeedback = feedback?.tableId === selectedTable?.id ? feedback : null
 
-  const canSubmit = name.trim() && email.trim() && phone.trim() && partySize && date && selectedTable
+  const canSubmit =
+    !isSubmitting && name.trim() && email.trim() && phone.trim() && partySize && date && selectedTable
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit || !selectedTable) return
-    onSubmit({
-      name: name.trim(),
-      email: email.trim(),
-      phone: phone.trim(),
-      partySize: Number(partySize),
-      date,
-      tableId: selectedTable.id,
-    })
-    setName('')
-    setEmail('')
-    setPhone('')
-    setPartySize('')
-    setDate('')
+    setIsSubmitting(true)
+    setFeedback(null)
+    try {
+      const result = await onSubmit({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        partySize: Number(partySize),
+        date,
+        tableId: selectedTable.id,
+      })
+      setFeedback({ ...result, tableId: selectedTable.id })
+      // Only clear on success — a failed request should leave the guest's
+      // details in place so they can retry without retyping everything.
+      if (result.ok) {
+        setName('')
+        setEmail('')
+        setPhone('')
+        setPartySize('')
+        setDate('')
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -148,8 +172,17 @@ export default function ReservationForm({ selectedTable, venueName, onSubmit }: 
             disabled={!canSubmit}
             className="w-full bg-white text-black hover:bg-gray-200"
           >
-            Reserve Now
+            {isSubmitting ? 'Sending…' : 'Reserve Now'}
           </Button>
+
+          {visibleFeedback && (
+            <p
+              role="status"
+              className={`text-center text-xs ${visibleFeedback.ok ? 'text-emerald-400' : 'text-red-400'}`}
+            >
+              {visibleFeedback.message}
+            </p>
+          )}
 
           <p className="text-center text-[10px] text-gray-600">
             {venueName} &middot; Guest checkout &middot; No account required
