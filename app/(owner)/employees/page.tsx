@@ -48,8 +48,29 @@ export default function EmployeesPage() {
   }, [])
 
   useEffect(() => {
-    void load()
-  }, [load])
+    let cancelled = false
+    ;(async () => {
+      try {
+        const response = await fetch("/api/owner/employees")
+        const data = await response.json()
+        if (cancelled) return
+        if (!response.ok) {
+          setLoadError(data.message ?? "Could not load employees.")
+          return
+        }
+        setEmployees(data.employees ?? [])
+        setInvites(data.invites ?? [])
+        setLoadError("")
+      } catch {
+        if (!cancelled) setLoadError("Could not reach the server.")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   async function handleInvite(event: React.FormEvent) {
     event.preventDefault()

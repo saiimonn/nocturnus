@@ -10,8 +10,10 @@ function EmployeeRegisterForm() {
   const searchParams = useSearchParams()
   const token = searchParams.get("token") ?? ""
 
-  const [phase, setPhase] = useState<Phase>("checking")
-  const [inviteError, setInviteError] = useState("")
+  const [phase, setPhase] = useState<Phase>(token ? "checking" : "invalid")
+  const [inviteError, setInviteError] = useState(
+    token ? "" : "This link is missing its invitation code."
+  )
   const [email, setEmail] = useState("")
   const [clubName, setClubName] = useState("")
 
@@ -23,8 +25,6 @@ function EmployeeRegisterForm() {
 
   useEffect(() => {
     if (!token) {
-      setPhase("invalid")
-      setInviteError("This link is missing its invitation code.")
       return
     }
     let cancelled = false
