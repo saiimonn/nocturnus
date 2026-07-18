@@ -8,8 +8,9 @@ export interface Database {
           email: string
           contact_number: string | null
           password_hash: string
-          role: "owner" | "admin"
+          role: "owner" | "admin" | "club_employee"
           status: "active" | "suspended"
+          club_id: string | null
           created_at: string
           updated_at: string
         }
@@ -19,8 +20,9 @@ export interface Database {
           email: string
           contact_number?: string | null
           password_hash: string
-          role: "owner" | "admin"
+          role: "owner" | "admin" | "club_employee"
           status?: "active" | "suspended"
+          club_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -30,8 +32,9 @@ export interface Database {
           email?: string
           contact_number?: string | null
           password_hash?: string
-          role?: "owner" | "admin"
+          role?: "owner" | "admin" | "club_employee"
           status?: "active" | "suspended"
+          club_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -60,6 +63,42 @@ export interface Database {
           expires_at?: string
           used?: boolean
           revoked?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      club_employee_invites: {
+        Row: {
+          id: string
+          club_id: string
+          email: string
+          token_hash: string
+          expires_at: string
+          used: boolean
+          revoked: boolean
+          invited_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          club_id: string
+          email: string
+          token_hash: string
+          expires_at: string
+          used?: boolean
+          revoked?: boolean
+          invited_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          club_id?: string
+          email?: string
+          token_hash?: string
+          expires_at?: string
+          used?: boolean
+          revoked?: boolean
+          invited_by?: string
           created_at?: string
         }
         Relationships: []
