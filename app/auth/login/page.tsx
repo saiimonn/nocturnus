@@ -29,7 +29,8 @@ export default function LoginPage() {
         setError(data?.message ?? "Unable to sign in. Please try again.");
         return;
       }
-      router.push("/dashboard");
+      const data = await res.json();
+      router.push(data.user?.role === "club_employee" ? "/scan" : "/dashboard");
       router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");

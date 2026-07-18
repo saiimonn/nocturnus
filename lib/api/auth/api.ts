@@ -49,9 +49,10 @@ export const login = handle(async (request) => {
     user?.password_hash ?? DUMMY_HASH,
   )
 
-  // Generic 401 for missing user, wrong password, or non-owner role — never
-  // disclose which one failed.
-  if (!user || !passwordOk || user.role !== "owner") {
+  // Generic 401 for missing user, wrong password, or a role that cannot log in
+  // (admin) — never disclose which one failed.
+  const loginableRole = user?.role === "owner" || user?.role === "club_employee"
+  if (!user || !passwordOk || !loginableRole) {
     throw unauthorized("Invalid email or password")
   }
 
@@ -59,7 +60,10 @@ export const login = handle(async (request) => {
     throw forbidden("Account suspended")
   }
 
-  const token = await createSession({ userId: user.id, role: "owner" })
+  const token = await createSession({
+    userId: user.id,
+    role: user.role as "owner" | "club_employee",
+  })
   const cookieStore = await cookies()
   cookieStore.set(SESSION_COOKIE, token, sessionCookieOptions)
 
