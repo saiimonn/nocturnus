@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase"
 import { supabaseAdmin } from "@/lib/supabase-admin"
-import { requireClubOwner } from "@/lib/api/shared/auth"
+import { requireClubOwner, requireEmployee } from "@/lib/api/shared/auth"
 import {
   badRequest,
   conflict,
@@ -147,7 +147,10 @@ export const updateReservation = handle(
       try {
         await sendReservationConfirmation(reservation)
       } catch (error) {
-        console.error("Failed to send reservation confirmation email:", error)
+        console.error(
+          `Failed to send reservation confirmation email for reservation ${reservation.id}:`,
+          error,
+        )
       }
     }
 
@@ -180,19 +183,31 @@ export const listClubReservations = handle(
 )
 
 export const checkinReservation = handle(async (request) => {
+  const session = await requireEmployee()
   const body = await readJson(request)
   requireFields(body, ["qr_code_token"])
 
-  const { data: existing, error } = await supabase
+  const { data: existing, error } = await supabaseAdmin
     .from("reservations")
     .select("*")
     .eq("qr_code_token", String(body.qr_code_token))
     .maybeSingle()
 
   if (error) {
+    // qr_code_token is a Postgres uuid column. A scanned code that isn't a
+    // well-formed UUID (a loyalty card, a parking stub, a damaged scan) makes
+    // Postgres reject the comparison with 22P02 (invalid_text_representation)
+    // rather than simply matching no rows. To the doorperson, a malformed
+    // code and an unknown code are the same situation, so both are reported
+    // as not-found instead of leaking a raw database error as a 500.
+    if (error.code === "22P02") {
+      throw notFound("No reservation matches that code")
+    }
     throw new Error(error.message)
   }
-  if (!existing) {
+  // A token from another venue is reported as not-found rather than forbidden,
+  // so the response never reveals that the code is valid somewhere else.
+  if (!existing || existing.club_id !== session.clubId) {
     throw notFound("No reservation matches that code")
   }
   if (existing.status === "checked_in") {
@@ -202,14 +217,52 @@ export const checkinReservation = handle(async (request) => {
     throw conflict(`A ${existing.status} reservation cannot be checked in`)
   }
 
-  const reservation = fromDb(
-    await supabase
-      .from("reservations")
-      .update({ status: "checked_in" })
-      .eq("id", existing.id)
-      .select("id, status, guest_name, party_size, reservation_date")
-      .maybeSingle(),
-  )
+  // Re-assert status = confirmed in the UPDATE itself, not just the read
+  // above: two simultaneous scans of the same QR both pass the read check,
+  // but only one may win the write. The losing request's UPDATE then matches
+  // no row (data comes back null with no error), which we turn into the same
+  // "already checked in" 409 the loser would have gotten had it lost the race
+  // more visibly, rather than a confusing 404/500.
+  const { data: updated, error: updateError } = await supabaseAdmin
+    .from("reservations")
+    .update({ status: "checked_in" })
+    .eq("id", existing.id)
+    .eq("status", "confirmed")
+    .select("id, status, guest_name, party_size, reservation_date")
+    .maybeSingle<
+      Pick<ReservationRow, "id" | "status" | "guest_name" | "party_size" | "reservation_date">
+    >()
+  if (updateError) {
+    throw new Error(updateError.message)
+  }
+  if (!updated) {
+    throw conflict("This reservation has already been checked in")
+  }
+  const reservation = updated
 
-  return Response.json({ reservation })
+  // Resolve display context for the door screen. Neither lookup is allowed to
+  // fail the check-in — the guest is already through at this point.
+  const { data: table } = await supabaseAdmin
+    .from("club_tables")
+    .select("label")
+    .eq("id", existing.table_id)
+    .maybeSingle()
+
+  const event = existing.event_id
+    ? (
+        await supabaseAdmin
+          .from("events")
+          .select("title")
+          .eq("id", existing.event_id)
+          .maybeSingle()
+      ).data
+    : null
+
+  return Response.json({
+    reservation: {
+      ...reservation,
+      table_label: table?.label ?? null,
+      event_title: event?.title ?? null,
+    },
+  })
 })

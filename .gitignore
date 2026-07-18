@@ -43,4 +43,7 @@ next-env.d.ts
 docs/
 .worktrees/
 
-supabase/
+# Local Supabase artifacts stay untracked (schema.sql, policies.sql,
+# teardown.sql), but migrations are versioned so the DDL history is reviewable.
+supabase/*
+!supabase/migrations/

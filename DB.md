@@ -16,10 +16,12 @@ Before diving into the tables, here are the core rules applied across the databa
 ## 🔗 Entity Relationships
 
 * **Users** (1) → **Clubs** (1) *(via `owner_id`, which is `UNIQUE`; an owner owns exactly one club)*
+* **Clubs** (1) → **Users** (M) *(via `club_id`; a club's `club_employee` accounts are scoped to that venue)*
 * **Clubs** (1) → **Club_Images** (M)
 * **Clubs** (1) → **Floor_Plans** (M)
 * **Clubs** (1) → **Events** (M)
 * **Clubs** (1) → **Club_Tables** (M)
+* **Clubs** (1) → **Club_Employee_Invites** (M)
 * **Floor_Plans** (1) → **Club_Tables** (M)
 * **Club_Tables** (1) → **Reservations** (M)
 * **Events** (1) → **Reservations** (M) *(Optional relation)*
@@ -29,7 +31,7 @@ Before diving into the tables, here are the core rules applied across the databa
 ## 🗄️ Table Definitions
 
 ### 1. `Users`
-Core identity table for platform users. Only `owner` and `admin` roles have accounts. Guests do not register — they submit reservations via a form and receive email confirmations directly.
+Core identity table for platform users. `owner`, `admin`, and `club_employee` roles have accounts. Guests do not register — they submit reservations via a form and receive email confirmations directly.
 
 | Column | Type | Constraints | Description |
 | :--- | :--- | :--- | :--- |
@@ -38,8 +40,9 @@ Core identity table for platform users. Only `owner` and `admin` roles have acco
 | `email` | `varchar` | NO NULL, UNIQUE| Unique email address. |
 | `contact_number`| `varchar` | NULLABLE | Mobile / contact number. |
 | `password_hash` | `varchar` | NO NULL | Bcrypt-hashed password. |
-| `role` | `varchar` | NO NULL | Accepts: `owner` or `admin`. |
+| `role` | `varchar` | NO NULL | Accepts: `owner`, `admin`, or `club_employee`. |
 | `status` | `varchar` | NO NULL, DEFAULT `active` | Accepts: `active`, `suspended`. A superadmin sets `suspended` to lock out a compromised or fraudulent account without deleting it. |
+| `club_id` | `uuid` | FK, NULLABLE | References `Clubs.id`. The venue a `club_employee` is scoped to; always `NULL` for `owner`/`admin`. Enforced by the `users_club_id_role_check` constraint: `(role = 'club_employee' AND club_id IS NOT NULL) OR (role <> 'club_employee' AND club_id IS NULL)` — an employee must always belong to a club, and an owner/admin must not have one set, both directions enforced at the database level. |
 | `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
 | `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
 
@@ -148,3 +151,19 @@ The central booking record linking guests, tables, clubs, and optionally, events
 | `created_at` | `timestamp` | NO NULL | Booking creation datetime (UTC). |
 | `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
 > **Note:** `guest_name`, `guest_email`, and `guest_contact` are stored directly on the reservation record to cleanly support walk-ins and guests who book without creating a platform account.
+
+### 9. `Club_Employee_Invites`
+One-time invite tokens an owner sends to onboard a `club_employee` for their venue. Mirrors `Owner_Verification_Tokens`, but deliberately carries `club_id` + `email`: an employee invite asserts venue identity, which the owner token deliberately does not.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `uuid` | PK, NO NULL | Invite record identifier. |
+| `club_id` | `uuid` | FK, NO NULL | References `Clubs.id`. The venue the invited employee will be attached to. |
+| `email` | `varchar` | NO NULL | Email address the invite was sent to. |
+| `token_hash` | `varchar` | NO NULL, UNIQUE | SHA-256 hash of the invite token. The plaintext token only ever appears in the invite email; it is never stored. |
+| `expires_at` | `timestamp` | NO NULL | Invite expiry datetime (UTC). |
+| `used` | `boolean` | NO NULL, DEFAULT `false` | TRUE once the invite has been redeemed. |
+| `revoked` | `boolean` | NO NULL, DEFAULT `false` | TRUE if the owner manually invalidated the invite before it was used or expired. A revoked invite must be rejected at redemption even if `expires_at` is still in the future. |
+| `invited_by` | `uuid` | FK, NO NULL | References `Users.id` — the owner who issued the invite. |
+| `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
+> **Note:** A partial unique index (`club_employee_invites_one_live_per_email`) on `(club_id, lower(email))` where `used = false AND revoked = false` enforces at most one live invite per email address per club, so an owner cannot pile up duplicate pending invites to the same person.

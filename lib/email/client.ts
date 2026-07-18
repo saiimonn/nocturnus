@@ -8,22 +8,22 @@ const EMAIL_FROM = process.env.EMAIL_FROM ?? "Otus <onboarding@resend.dev>"
 // than throwing at import time.
 const resend = apiKey ? new Resend(apiKey) : null
 
-// Sends a transactional email rendered from a React Email element. If
-// RESEND_API_KEY is unset (e.g. a dev without email configured), it warns and
-// no-ops so the caller's flow still succeeds — callers treat email as
-// best-effort regardless.
-export async function sendReservationEmail(args: {
+// Sends a transactional email rendered from a React Email element. Returns true
+// if sent, false if RESEND_API_KEY is unset (e.g. a dev without email configured).
+// Throws on actual Resend errors. Callers can choose to treat email as best-effort
+// (ignoring the return value) or strict (checking it).
+export async function sendEmail(args: {
   to: string
   subject: string
   react: ReactElement
-}): Promise<void> {
+}): Promise<boolean> {
   if (!resend) {
     console.warn(
       "[email] RESEND_API_KEY is unset — skipping send to",
       args.to,
       `(subject: ${args.subject})`,
     )
-    return
+    return false
   }
   const { error } = await resend.emails.send({
     from: EMAIL_FROM,
@@ -34,4 +34,5 @@ export async function sendReservationEmail(args: {
   if (error) {
     throw new Error(error.message)
   }
+  return true
 }

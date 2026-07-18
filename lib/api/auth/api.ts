@@ -55,9 +55,10 @@ export const login = handle(async (request) => {
     user?.password_hash ?? DUMMY_HASH,
   )
 
-  // Generic 401 for missing user, wrong password, or non-owner role — never
-  // disclose which one failed.
-  if (!user || !passwordOk || user.role !== "owner") {
+  // Generic 401 for missing user, wrong password, or a role that cannot log in
+  // (admin) — never disclose which one failed.
+  const loginableRole = user?.role === "owner" || user?.role === "club_employee"
+  if (!user || !passwordOk || !loginableRole) {
     throw unauthorized("Invalid email or password")
   }
 
@@ -65,7 +66,10 @@ export const login = handle(async (request) => {
     throw forbidden("Account suspended")
   }
 
-  const token = await createSession({ userId: user.id, role: "owner" })
+  const token = await createSession({
+    userId: user.id,
+    role: user.role as "owner" | "club_employee",
+  })
   const cookieStore = await cookies()
   cookieStore.set(SESSION_COOKIE, token, sessionCookieOptions)
 
@@ -189,6 +193,136 @@ export const redeemVerificationToken = handle(async (request) => {
   )
 
   const token = await createSession({ userId: user.id, role: "owner" })
+  const cookieStore = await cookies()
+  cookieStore.set(SESSION_COOKIE, token, sessionCookieOptions)
+
+  return Response.json({ user }, { status: 201 })
+})
+
+export const checkEmployeeInvite = handle(async (request) => {
+  const body = await readJson(request)
+  requireFields(body, ["token"])
+  const tokenHash = hashToken(String(body.token))
+
+  const { data: invite, error } = await supabaseAdmin
+    .from("club_employee_invites")
+    .select("email, used, revoked, expires_at, clubs(name)")
+    .eq("token_hash", tokenHash)
+    .maybeSingle<{
+      email: string
+      used: boolean
+      revoked: boolean
+      expires_at: string
+      clubs: { name: string } | null
+    }>()
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  if (
+    !invite ||
+    invite.used ||
+    invite.revoked ||
+    new Date(invite.expires_at) <= new Date()
+  ) {
+    throw unauthorized("This invitation is invalid or has expired")
+  }
+
+  const club = invite.clubs as unknown as { name: string } | null
+
+  return Response.json({
+    valid: true,
+    email: invite.email,
+    clubName: club?.name ?? "your club",
+  })
+})
+
+export const redeemEmployeeInvite = handle(async (request) => {
+  const body = await readJson(request)
+  requireFields(body, ["token", "full_name", "password"])
+
+  if (typeof body.full_name !== "string" || body.full_name.trim() === "") {
+    throw badRequest("full_name must be a non-empty string")
+  }
+
+  const password = String(body.password)
+  if (password.length < 8) {
+    throw badRequest("Password must be at least 8 characters")
+  }
+
+  const tokenHash = hashToken(String(body.token))
+
+  // Read the invite first so we know the bound email. The email comes from
+  // this row and NEVER from the request body — that binding is what makes a
+  // forwarded invite link useless to anyone else.
+  const { data: invite, error: inviteError } = await supabaseAdmin
+    .from("club_employee_invites")
+    .select("id, club_id, email")
+    .eq("token_hash", tokenHash)
+    .eq("used", false)
+    .eq("revoked", false)
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle()
+  if (inviteError) {
+    throw new Error(inviteError.message)
+  }
+  if (!invite) {
+    throw unauthorized("This invitation is invalid or has expired")
+  }
+
+  const { data: existingUser, error: existingUserError } = await supabaseAdmin
+    .from("users")
+    .select("id")
+    .eq("email", invite.email)
+    .maybeSingle()
+  if (existingUserError) {
+    throw new Error(existingUserError.message)
+  }
+  if (existingUser) {
+    throw conflict("An account with this email already exists")
+  }
+
+  // Atomically claim the invite before creating the user, so a losing race
+  // never produces a duplicate account. Same pattern as the owner flow
+  // (redeemVerificationToken): re-assert used = false, revoked = false, and
+  // expires_at > now inside the UPDATE itself, not just in the earlier SELECT
+  // — otherwise an owner revoking the invite in the window between this
+  // handler's SELECT and UPDATE would not stop the account being created.
+  const { data: claimed, error: claimError } = await supabaseAdmin
+    .from("club_employee_invites")
+    .update({ used: true })
+    .eq("id", invite.id)
+    .eq("used", false)
+    .eq("revoked", false)
+    .gt("expires_at", new Date().toISOString())
+    .select("id")
+    .maybeSingle()
+  if (claimError) {
+    throw new Error(claimError.message)
+  }
+  if (!claimed) {
+    throw unauthorized("This invitation has already been used")
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10)
+  const user = fromDb<NewUserRow>(
+    await supabaseAdmin
+      .from("users")
+      .insert({
+        full_name: String(body.full_name).trim(),
+        email: invite.email,
+        contact_number:
+          (body.contact_number as string | undefined)?.trim() || null,
+        password_hash: passwordHash,
+        role: "club_employee",
+        club_id: invite.club_id,
+        status: "active",
+      })
+      .select("id, full_name, email, role")
+      .single(),
+  )
+
+  const token = await createSession({ userId: user.id, role: "club_employee" })
   const cookieStore = await cookies()
   cookieStore.set(SESSION_COOKIE, token, sessionCookieOptions)
 
