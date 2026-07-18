@@ -87,12 +87,12 @@ Additional gallery images for a specific club.
 | `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
 
 ### 5. `Floor_Plans`
-Distinct physical spaces within a club (e.g., Ground Floor, VIP Mezzanine).
+The club's bookable layout — **exactly one per club**, not one per physical space. An earlier revision of this table described it as "distinct physical spaces within a club (e.g., Ground Floor, VIP Mezzanine)"; that is not what the schema or the code does. `club_id` is `UNIQUE` (migration `0004_floor_plans_one_per_club.sql`), `createFloorPlan` upserts on `club_id`, and the layout editor reads the first floor plan as *the* floor plan. Multiple levels are expressed as table groupings within the single plan, not as multiple rows.
 
 | Column | Type | Constraints | Description |
 | :--- | :--- | :--- | :--- |
 | `id` | `uuid` | PK, NO NULL | Floor plan identifier. |
-| `club_id` | `uuid` | FK, NO NULL | References `Clubs.id`. |
+| `club_id` | `uuid` | FK, UNIQUE, NO NULL | References `Clubs.id`. `UNIQUE` — one floor plan per club. |
 | `name` | `varchar` | NO NULL | Floor plan label (e.g., "Ground Floor"). |
 | `image_url` | `varchar` | NO NULL | URL to the 2D floor plan canvas image. |
 | `labels` | `jsonb` | NULLABLE | Array of static annotations `[{text, x, y}]` for area labels (e.g., "STAGE", "BAR"). Coordinates use 0.0–1.0 relative to the canvas, same system as `Club_Tables.pos_x`/`pos_y`. |

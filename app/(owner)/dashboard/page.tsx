@@ -23,6 +23,17 @@ function formatDate(iso: string) {
   })
 }
 
+// Compares calendar days, not formatted labels. formatDate omits the year, so
+// comparing its output treats the same month/day in any year as "today".
+function isSameDay(iso: string, other: Date) {
+  const d = new Date(iso)
+  return (
+    d.getFullYear() === other.getFullYear() &&
+    d.getMonth() === other.getMonth() &&
+    d.getDate() === other.getDate()
+  )
+}
+
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleDateString("en-PH", {
     month: "short",
@@ -243,10 +254,8 @@ export default function OwnerDashboardPage() {
               <span>Reservations today</span>
               <span className="font-medium text-foreground">
                 {
-                  reservations.filter(
-                    (r) =>
-                      formatDate(r.reservation_date) === formatDate(now.toISOString())
-                  ).length
+                  reservations.filter((r) => isSameDay(r.reservation_date, now))
+                    .length
                 }
               </span>
             </div>

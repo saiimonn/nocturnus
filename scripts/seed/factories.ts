@@ -167,19 +167,54 @@ export function makeReservation(
   eventId: string | null,
 ): Tables["reservations"]["Insert"] {
   const ts = now()
-  const status = faker.helpers.arrayElement([
-    "pending",
-    "confirmed",
-    "cancelled",
-    "checked_in",
+
+  // Spread bookings across past/today/future, and pick a status that makes
+  // sense for when the booking is. Seeding every reservation into the future
+  // (faker.date.soon) left the history screens — which filter to cancelled and
+  // checked_in — and the dashboard's "reservations today" permanently empty,
+  // and produced nonsense rows like a booking already checked in three weeks
+  // from now.
+  const when = faker.helpers.weightedArrayElement([
+    { value: "past", weight: 5 },
+    { value: "today", weight: 2 },
+    { value: "future", weight: 5 },
   ] as const)
+
+  let reservationDate: Date
+  let status: "pending" | "confirmed" | "cancelled" | "checked_in"
+
+  if (when === "past") {
+    reservationDate = faker.date.recent({ days: 45 })
+    // A past booking has already resolved: the guest showed up or it fell through.
+    status = faker.helpers.weightedArrayElement([
+      { value: "checked_in", weight: 7 },
+      { value: "cancelled", weight: 3 },
+    ] as const)
+  } else if (when === "today") {
+    reservationDate = new Date()
+    reservationDate.setHours(faker.number.int({ min: 20, max: 23 }), 0, 0, 0)
+    status = faker.helpers.weightedArrayElement([
+      { value: "confirmed", weight: 5 },
+      { value: "checked_in", weight: 3 },
+      { value: "pending", weight: 2 },
+    ] as const)
+  } else {
+    reservationDate = faker.date.soon({ days: 30 })
+    // Nothing upcoming can have been checked in yet.
+    status = faker.helpers.weightedArrayElement([
+      { value: "pending", weight: 5 },
+      { value: "confirmed", weight: 4 },
+      { value: "cancelled", weight: 1 },
+    ] as const)
+  }
+
   const hasQr = status === "confirmed" || status === "checked_in"
   return {
     id: randomUUID(),
     table_id: tableId,
     club_id: clubId,
     event_id: eventId,
-    reservation_date: faker.date.soon({ days: 30 }).toISOString(),
+    reservation_date: reservationDate.toISOString(),
     guest_name: faker.person.fullName(),
     guest_email: faker.internet.email().toLowerCase(),
     guest_contact:

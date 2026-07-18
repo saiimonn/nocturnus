@@ -19,8 +19,10 @@ const COUNTS = {
   admins: 2,
   clubsPerOwner: 1,
   imagesPerClub: 4,
-  floorPlansPerClub: 2,
-  tablesPerFloorPlan: 8,
+  // floor_plans.club_id is UNIQUE — a club has exactly one floor plan (the
+  // create path upserts on club_id). Keep this at 1.
+  floorPlansPerClub: 1,
+  tablesPerFloorPlan: 16,
   eventsPerClub: 3,
   reservationsPerClub: 15,
   verificationTokens: 5,
