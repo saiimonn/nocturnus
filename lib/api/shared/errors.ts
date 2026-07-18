@@ -1,11 +1,20 @@
 export class ApiError extends Error {
   status: number
   code: string
+  // Optional response headers. Only set by errors that need to tell the client
+  // something the JSON body cannot carry — currently just Retry-After on 429.
+  headers?: Record<string, string>
 
-  constructor(status: number, code: string, message: string) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    headers?: Record<string, string>,
+  ) {
     super(message)
     this.status = status
     this.code = code
+    this.headers = headers
   }
 }
 
@@ -29,6 +38,17 @@ export function conflict(message: string) {
   return new ApiError(409, "conflict", message)
 }
 
+// Message is deliberately generic and identical across every rate-limited
+// endpoint, so a 429 never reveals which check the caller tripped.
+export function tooManyRequests(retryAfterSeconds: number) {
+  return new ApiError(
+    429,
+    "too_many_requests",
+    "Too many requests. Please try again later.",
+    { "Retry-After": String(Math.max(1, Math.ceil(retryAfterSeconds))) },
+  )
+}
+
 export function notImplemented(message = "Not implemented") {
   return new ApiError(501, "not_implemented", message)
 }
@@ -43,7 +63,10 @@ export function handle<C = unknown>(fn: Handler<C>): Handler<C> {
       return await fn(request, context)
     } catch (e) {
       if (e instanceof ApiError) {
-        return Response.json({ error: e.code, message: e.message }, { status: e.status })
+        return Response.json(
+          { error: e.code, message: e.message },
+          { status: e.status, ...(e.headers ? { headers: e.headers } : {}) },
+        )
       }
       const message = e instanceof Error ? e.message : String(e)
       return Response.json({ error: "internal_error", message }, { status: 500 })

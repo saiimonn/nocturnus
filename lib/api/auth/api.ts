@@ -12,6 +12,7 @@ import {
   requireFields,
   unauthorized,
 } from "@/lib/api/shared/errors"
+import { enforceRateLimit } from "@/lib/api/shared/rate-limit"
 import {
   SESSION_COOKIE,
   createSession,
@@ -29,6 +30,11 @@ type NewUserRow = Pick<
 const DUMMY_HASH = "$2b$10$CwTycUXWue0Thq9StjUM0uJ8DvXHr8pqzXY8oB0h7Xz1J8b4y0zK"
 
 export const login = handle(async (request) => {
+  // Before readJson and before bcrypt: every attempt costs a full cost-10
+  // compare (see DUMMY_HASH above), so an unthrottled login is a CPU
+  // exhaustion vector as well as a credential-stuffing one.
+  await enforceRateLimit(request, "auth:login", 15, 15 * 60)
+
   const body = await readJson(request)
   requireFields(body, ["email", "password"])
   const email = String(body.email).trim().toLowerCase()
@@ -88,6 +94,11 @@ function hashToken(plaintext: string): string {
 }
 
 export const checkVerificationToken = handle(async (request) => {
+  // Tightest limit of the three. This endpoint reports whether an invite token
+  // is valid *without consuming it*, making it a brute-force oracle against a
+  // 12-character token — the weakest point in the auth surface.
+  await enforceRateLimit(request, "auth:verify-check", 10, 15 * 60)
+
   const body = await readJson(request)
   requireFields(body, ["token"])
   const tokenHash = hashToken(String(body.token))
@@ -114,6 +125,10 @@ export const checkVerificationToken = handle(async (request) => {
 })
 
 export const redeemVerificationToken = handle(async (request) => {
+  // Account creation is rare by design — owners exist only by redeeming a
+  // superadmin-issued token — so this can be far stricter than login.
+  await enforceRateLimit(request, "auth:verify-redeem", 5, 60 * 60)
+
   const body = await readJson(request)
   requireFields(body, ["token", "full_name", "email", "password"])
 
