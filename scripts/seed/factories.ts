@@ -44,6 +44,23 @@ export function makeUser(
   }
 }
 
+export function makeClubEmployee(
+  clubId: string,
+  passwordHash: string,
+  overrides: Partial<Tables["users"]["Insert"]> = {},
+): Tables["users"]["Insert"] {
+  return {
+    full_name: faker.person.fullName(),
+    email: faker.internet.email().toLowerCase(),
+    contact_number: faker.phone.number(),
+    password_hash: passwordHash,
+    role: "club_employee",
+    club_id: clubId,
+    status: "active",
+    ...overrides,
+  }
+}
+
 export function makeClub(ownerId: string): Tables["clubs"]["Insert"] {
   const ts = now()
   const name = `${faker.company.name()} Club`

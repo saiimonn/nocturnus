@@ -5,6 +5,7 @@ import type { Database } from "../lib/db"
 import {
   makeUser,
   makeClub,
+  makeClubEmployee,
   makeClubImage,
   makeFloorPlan,
   makeClubTable,
@@ -23,14 +24,16 @@ const COUNTS = {
   eventsPerClub: 3,
   reservationsPerClub: 15,
   verificationTokens: 5,
+  employeesPerClub: 2,
 }
 
 // Known login credentials. Every seeded user shares SEED_PASSWORD (bcrypt-hashed
-// per DB.md), and these two fixed accounts have stable, memorable emails so you
-// always know one owner and one admin to log in with. Change to taste.
+// per DB.md), and these fixed accounts have stable, memorable emails so you
+// always know one owner, one admin, and one employee to log in with. Change to taste.
 const SEED_PASSWORD = "password123"
 const FIXED_OWNER = { email: "owner@otus.dev", full_name: "Demo Owner" }
 const FIXED_ADMIN = { email: "admin@otus.dev", full_name: "Demo Admin" }
+const FIXED_EMPLOYEE = { email: "employee@otus.dev", full_name: "Demo Door Staff" }
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -55,6 +58,7 @@ const WIPE_ORDER = [
   "club_images",
   "floor_plans",
   "events",
+  "club_employee_invites",
   "clubs",
   "users",
   "owner_verification_tokens",
@@ -157,9 +161,20 @@ async function main(): Promise<void> {
     makeVerificationToken(),
   )
 
+  // Employees reference clubs, so they can only be built/inserted after clubs
+  // exist. The fixed employee is the first employee of the first club.
+  const employees: ReturnType<typeof makeClubEmployee>[] = []
+  clubs.forEach((club, i) => {
+    for (let e = 0; e < COUNTS.employeesPerClub; e++) {
+      const overrides = i === 0 && e === 0 ? { ...FIXED_EMPLOYEE, status: "active" as const } : {}
+      employees.push(makeClubEmployee(club.id!, passwordHash, overrides))
+    }
+  })
+
   console.log("Inserting (FK order):")
   await insertRows("users", users)
   await insertRows("clubs", clubs)
+  await insertRows("users", employees)
   await insertRows("club_images", clubImages)
   await insertRows("floor_plans", floorPlans)
   await insertRows("events", events)
@@ -176,6 +191,7 @@ async function main(): Promise<void> {
     `  owner → ${FIXED_OWNER.email}  (role: owner, owns ${COUNTS.clubsPerOwner} clubs)`,
   )
   console.log(`  admin → ${FIXED_ADMIN.email}  (role: admin)`)
+  console.log(`  employee → ${FIXED_EMPLOYEE.email}  (role: club_employee)`)
   console.log("\nVerification tokens (plaintext — redeem out-of-band):")
   for (const t of tokens) console.log(`  ${t.plaintext}`)
 }
