@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "picsum.photos",
       },
+      // Nightlife stock photos used by the seed script for club covers/galleries.
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
       // Serves uploaded club media (gallery/cover/floor-plan/event images)
       // from the `club-media` Supabase Storage bucket.
       ...(supabaseHostname

@@ -12,6 +12,24 @@ function shortId(): string {
   return randomUUID().slice(0, 8)
 }
 
+// Curated nightlife stills so seeded club profiles look like venues rather than
+// the random stock photos `faker.image.url()` hands back.
+const NIGHTLIFE_IMAGE_IDS = [
+  "photo-1566737236500-c8ac43014a67", // neon-lit entrance corridor
+  "photo-1516450360452-9312f5e86fc7", // DJ booth over a packed floor
+  "photo-1493225457124-a3eb161ffa5f", // hands up in stage smoke
+  "photo-1533174072545-7a4b6ad7a6c3", // confetti over a night crowd
+  "photo-1514525253161-7a46d19cd819", // lasers and confetti
+  "photo-1544785349-c4a5301826fd", // close-up on the decks
+  "photo-1492684223066-81342ee5ff30", // confetti burst under blue light
+  "photo-1545128485-c400e7702796", // red-washed dark dancefloor
+]
+
+function nightlifeImageUrl(width = 1200, height = 800): string {
+  const id = faker.helpers.arrayElement(NIGHTLIFE_IMAGE_IDS)
+  return `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${width}&h=${height}&q=80`
+}
+
 function operatingHours(): { day: string; open: string; close: string }[] {
   return ["Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => ({
     day,
@@ -72,7 +90,7 @@ export function makeClub(ownerId: string): Tables["clubs"]["Insert"] {
     description: faker.lorem.paragraph(),
     address: faker.location.streetAddress({ useFullAddress: true }),
     operating_hours: operatingHours(),
-    cover_image_url: faker.image.url(),
+    cover_image_url: nightlifeImageUrl(1600, 900),
     status: faker.helpers.weightedArrayElement([
       { value: "active", weight: 8 },
       { value: "draft", weight: 1 },
@@ -87,7 +105,7 @@ export function makeClubImage(clubId: string): Tables["club_images"]["Insert"] {
   return {
     id: randomUUID(),
     club_id: clubId,
-    image_url: faker.image.url(),
+    image_url: nightlifeImageUrl(),
     caption:
       faker.helpers.maybe(() => faker.lorem.sentence(), { probability: 0.6 }) ?? null,
     created_at: now(),
