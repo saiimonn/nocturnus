@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800">
+  <rect width="1200" height="800" fill="#0b1220"/>
+  <g fill="none" stroke="#7dd3fc" stroke-width="3" stroke-linejoin="round">
+    <!-- vaulted basement shell -->
+    <path d="M60 740 L60 260 Q600 60 1140 260 L1140 740 Z"/>
+    <path d="M95 720 L95 285 Q600 100 1105 285 L1105 720" stroke-width="1.5" opacity="0.45"/>
+    <!-- structural columns -->
+    <g stroke-width="2">
+      <circle cx="330" cy="380" r="22"/>
+      <circle cx="600" cy="345" r="22"/>
+      <circle cx="870" cy="380" r="22"/>
+      <circle cx="330" cy="620" r="22"/>
+      <circle cx="870" cy="620" r="22"/>
+    </g>
+    <!-- dj booth, back wall -->
+    <path d="M480 175 L720 175 L720 265 L480 265 Z"/>
+    <path d="M510 200 L690 200 L690 245 L510 245 Z" stroke-width="1.5" opacity="0.6"/>
+    <!-- long bar down the right -->
+    <path d="M960 300 L1105 300 L1105 660 L960 660"/>
+    <!-- lounge seating, left -->
+    <g stroke-width="2">
+      <rect x="130" y="430" width="160" height="90" rx="14"/>
+      <rect x="130" y="550" width="160" height="90" rx="14"/>
+      <rect x="130" y="310" width="160" height="90" rx="14"/>
+    </g>
+    <!-- sunken dancefloor -->
+    <rect x="420" y="420" width="380" height="260" rx="6" stroke-dasharray="14 10"/>
+  </g>
+  <g fill="#7dd3fc" font-family="monospace" font-size="16" opacity="0.4">
+    <text x="80" y="40">BASEMENT LOUNGE — PLAN VIEW</text>
+    <text x="1120" y="40" text-anchor="end">SCALE 1:100</text>
+  </g>
+</svg>

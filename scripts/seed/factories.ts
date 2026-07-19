@@ -114,21 +114,59 @@ export function makeClubImage(clubId: string): Tables["club_images"]["Insert"] {
 
 export function makeFloorPlan(clubId: string): Tables["floor_plans"]["Insert"] {
   const ts = now()
+  // Each plan ships as a hand-drawn blueprint under `public/floorplans/`, so the
+  // name and the drawing always describe the same room.
+  // Label positions are tuned to each drawing's geometry — a label only makes
+  // sense sitting on the room it names, so the two move together.
+  const plan = faker.helpers.arrayElement([
+    {
+      name: "Ground Floor",
+      image: "ground-floor",
+      labels: [
+        { text: "STAGE", x: 0.5, y: 0.19 },
+        { text: "BAR", x: 0.14, y: 0.55 },
+        { text: "DANCEFLOOR", x: 0.5, y: 0.56 },
+        { text: "BOOTHS", x: 0.86, y: 0.25 },
+        { text: "ENTRANCE", x: 0.5, y: 0.95 },
+      ],
+    },
+    {
+      name: "VIP Mezzanine",
+      image: "vip-mezzanine",
+      labels: [
+        { text: "VIP TABLES", x: 0.5, y: 0.14 },
+        { text: "OPEN TO BELOW", x: 0.5, y: 0.7 },
+        { text: "BAR", x: 0.11, y: 0.64 },
+        { text: "STAIRS", x: 0.89, y: 0.51 },
+      ],
+    },
+    {
+      name: "Rooftop",
+      image: "rooftop",
+      labels: [
+        { text: "POOL", x: 0.5, y: 0.35 },
+        { text: "BAR", x: 0.5, y: 0.67 },
+        { text: "CABANAS", x: 0.16, y: 0.19 },
+        { text: "STAIR CORE", x: 0.5, y: 0.95 },
+      ],
+    },
+    {
+      name: "Basement Lounge",
+      image: "basement-lounge",
+      labels: [
+        { text: "DJ BOOTH", x: 0.5, y: 0.29 },
+        { text: "DANCEFLOOR", x: 0.51, y: 0.7 },
+        { text: "BAR", x: 0.86, y: 0.61 },
+        { text: "LOUNGE", x: 0.18, y: 0.36 },
+      ],
+    },
+  ])
   return {
     id: randomUUID(),
     club_id: clubId,
-    name: faker.helpers.arrayElement([
-      "Ground Floor",
-      "VIP Mezzanine",
-      "Rooftop",
-      "Basement Lounge",
-    ]),
-    image_url: faker.image.url(),
-    labels: [
-      { text: "STAGE", x: 0.5, y: 0.1 },
-      { text: "BAR", x: 0.1, y: 0.5 },
-      { text: "DANCEFLOOR", x: 0.5, y: 0.6 },
-    ],
+    name: plan.name,
+    image_url: `/floorplans/${plan.image}.svg`,
+    labels: [...plan.labels],
     created_at: ts,
     updated_at: ts,
   }
@@ -171,7 +209,7 @@ export function makeEvent(clubId: string): Tables["events"]["Insert"] {
       "Rave",
     ])}`,
     description: faker.lorem.sentences(2),
-    image_url: faker.image.url(),
+    image_url: nightlifeImageUrl(1200, 675),
     event_date: faker.date.soon({ days: 60 }).toISOString(),
     status: faker.helpers.arrayElement(["draft", "published", "cancelled"] as const),
     created_at: ts,

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800">
+  <rect width="1200" height="800" fill="#0b1220"/>
+  <g fill="none" stroke="#7dd3fc" stroke-width="3" stroke-linejoin="round">
+    <!-- roof edge / parapet -->
+    <rect x="60" y="60" width="1080" height="680" rx="8"/>
+    <rect x="95" y="95" width="1010" height="610" rx="6" stroke-width="1.5" opacity="0.5"/>
+    <!-- pool -->
+    <rect x="450" y="180" width="300" height="180" rx="10"/>
+    <rect x="470" y="200" width="260" height="140" rx="6" stroke-width="1.5" opacity="0.6"/>
+    <!-- island bar -->
+    <path d="M470 470 L730 470 L730 580 L470 580 Z"/>
+    <path d="M500 500 L700 500 L700 550 L500 550 Z" stroke-width="1.5" opacity="0.6"/>
+    <!-- cabanas along both edges -->
+    <g stroke-width="2">
+      <rect x="120" y="180" width="150" height="110"/>
+      <rect x="120" y="330" width="150" height="110"/>
+      <rect x="120" y="480" width="150" height="110"/>
+      <rect x="930" y="180" width="150" height="110"/>
+      <rect x="930" y="330" width="150" height="110"/>
+      <rect x="930" y="480" width="150" height="110"/>
+    </g>
+    <!-- stair core -->
+    <g stroke-width="2">
+      <rect x="530" y="640" width="140" height="100"/>
+      <path d="M530 670 L670 670 M530 700 L670 700" stroke-width="1.5" opacity="0.6"/>
+    </g>
+  </g>
+  <g fill="#7dd3fc" font-family="monospace" font-size="16" opacity="0.4">
+    <text x="80" y="40">ROOFTOP TERRACE — PLAN VIEW</text>
+    <text x="1120" y="40" text-anchor="end">SCALE 1:100</text>
+  </g>
+</svg>
