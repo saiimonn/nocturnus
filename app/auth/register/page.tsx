@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, MapPin } from "lucide-react";
+import LiquidBackground from "@/components/liquidBackground";
 
 export default function ClubOwnerRegisterPage() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -117,305 +119,300 @@ export default function ClubOwnerRegisterPage() {
   }
 
   return (
-    <div className = "relative min-h-screen w-full overflow-hidden bg-[#0a0a0a] text-white">
-      <div className = "relative z-10 flex flex-col p-8 md:px-16">
-        <div className = "flex items-center justify-between">
-          {step === 1 ? (
-            <Link href="/" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors">
-              <ArrowLeft className="size-4" />
-              Back
-            </Link>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setStep((s) => (s === 3 ? 2 : 1))}
-              className = "flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="size-4" />
-              Back
-            </button>
-          )}
-          <div className = "flex items-center gap-2 text-xs text-gray-400">
-            <span>STEP</span>
-            <span className = "rounded bg-[#1a1a1a] px-2 py-1 font-mono text-white">
-              {step}
-            </span>
-            <span />
-            <span className = "font-mono">03</span>
+    <div className="relative flex min-h-screen items-center justify-center bg-black px-4 py-12 text-white">
+      <LiquidBackground />
+
+      <div className="relative z-10 w-full max-w-md">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <div className="mb-6 h-16 w-24">
+            <Image src="/logo.svg" alt="Otus" width={96} height={64} className="h-full w-full object-contain" />
           </div>
+          <p className="text-[11px] uppercase tracking-[0.25em] text-gray-500">
+            Venue Owner Portal
+          </p>
         </div>
 
-        <div className = "flex justify-center pt-10 md:pt-16">
-          <div className = "w-full max-w-md">
+        <div className="club-glass rounded-2xl p-8 md:p-10">
+          <div className="mb-6 flex items-center justify-between">
             {step === 1 ? (
-              <>
-                <h1 className = "font-serif text-4xl font-semibold leading-tight">
-                  Enter Invite Token
-                </h1>
-                <p>
-                  Venue Registration is restricted. Enter 12-character token sent by our admin to proceed with onboarding
-                </p>
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-gray-500 transition-colors hover:text-white"
+              >
+                <ArrowLeft className="size-3" />
+                Back
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setStep((s) => (s === 3 ? 2 : 1))}
+                className="inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-gray-500 transition-colors hover:text-white"
+              >
+                <ArrowLeft className="size-3" />
+                Back
+              </button>
+            )}
 
-                <div className = "mt-10">
-                  <label className = "text-xs uppercase tracking-widest text-gray-500 pr-4">
-                    Invite Token
+            <div className="flex items-center gap-3">
+              {[1, 2, 3].map((s) => (
+                <div key={s} className="flex items-center gap-2">
+                  <div
+                    className={`flex size-7 items-center justify-center rounded-full border text-[11px] font-mono transition-colors ${
+                      s === step
+                        ? "border-white/40 bg-white/10 text-white"
+                        : s < step
+                          ? "border-white/20 bg-white/5 text-gray-400"
+                          : "border-white/10 text-gray-600"
+                    }`}
+                  >
+                    {s}
+                  </div>
+                  {s < 3 && (
+                    <div className={`w-4 h-px ${s < step ? "bg-white/20" : "bg-white/10"}`} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {step === 1 ? (
+            <>
+              <h1 className="text-3xl font-light tracking-tight md:text-4xl">
+                Enter Invite Token
+              </h1>
+              <p className="mt-3 text-sm leading-relaxed text-gray-400">
+                Venue registration is restricted. Enter the token sent by our team to proceed with onboarding.
+              </p>
+
+              <div className="mt-8">
+                <label className="text-[11px] uppercase tracking-widest text-gray-500">
+                  Invite Token
+                </label>
+                <input
+                  value={inviteToken}
+                  onChange={(e) => setInviteToken(e.target.value)}
+                  placeholder="XXXX-XXXX-XXXX"
+                  className="mt-2 h-12 w-full rounded-lg border border-white/10 bg-white/5 px-4 font-mono text-sm tracking-widest text-white placeholder:text-gray-600 focus:border-white/25 focus:outline-none"
+                />
+              </div>
+
+              {step1Error && (
+                <p className="mt-4 text-sm text-red-400" role="alert">
+                  {step1Error}
+                </p>
+              )}
+
+              <button
+                onClick={handleContinueFromStep1}
+                disabled={step1Loading}
+                className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white text-sm font-medium text-black transition-all hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {step1Loading ? "Verifying…" : "Continue"}
+                <ArrowRight className="size-4" />
+              </button>
+
+              <p className="mt-6 text-center text-sm text-gray-500">
+                Already have an account?{" "}
+                <Link href="/auth/login" className="text-white underline underline-offset-2">
+                  Login
+                </Link>
+              </p>
+            </>
+          ) : step === 2 ? (
+            <>
+              <h1 className="text-3xl font-light tracking-tight md:text-4xl">
+                User Details
+              </h1>
+              <p className="mt-3 text-sm leading-relaxed text-gray-400">
+                Tell us who you are and set up your login credentials.
+              </p>
+
+              <div className="mt-8 space-y-5">
+                <div>
+                  <label className="text-[11px] uppercase tracking-widest text-gray-500">
+                    Full Name
                   </label>
                   <input
-                    value={inviteToken}
-                    onChange={(e) => setInviteToken(e.target.value)}
-                    placeholder="XXXX-XXXX-XXXX"
-                    className = "mt-2 h-12 rounded-lg border border-[#2a2a2a] bg-[#141414] px-4 text-sm tracking-widest text-white placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Juan Dela Cruz"
+                    className="mt-2 h-11 w-full rounded-lg border border-white/10 bg-white/5 px-4 text-sm text-white placeholder:text-gray-600 focus:border-white/25 focus:outline-none"
                   />
                 </div>
 
-                {step1Error && (
-                  <p className = "mt-4 text-sm text-red-400" role="alert">
-                    {step1Error}
+                <div>
+                  <label className="text-[11px] uppercase tracking-widest text-gray-500">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="owner@venue.com"
+                    className="mt-2 h-11 w-full rounded-lg border border-white/10 bg-white/5 px-4 text-sm text-white placeholder:text-gray-600 focus:border-white/25 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] uppercase tracking-widest text-gray-500">
+                    Contact Number <span className="normal-case text-gray-600">(optional)</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={contactNumber}
+                    onChange={(e) => setContactNumber(e.target.value)}
+                    placeholder="+63 9XX XXX XXXX"
+                    className="mt-2 h-11 w-full rounded-lg border border-white/10 bg-white/5 px-4 text-sm text-white placeholder:text-gray-600 focus:border-white/25 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] uppercase tracking-widest text-gray-500">
+                    Password
+                  </label>
+                  <div className="relative mt-2">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="h-11 w-full rounded-lg border border-white/10 bg-white/5 px-4 pr-11 text-sm text-white placeholder:text-gray-600 focus:border-white/25 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                    >
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-600">
+                    Minimum of 8 characters, including alphanumeric.
                   </p>
-                )}
+                </div>
 
-                <button
-                  onClick={handleContinueFromStep1}
-                  disabled={step1Loading}
-                  className = "mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white text-sm font-medium text-black transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {step1Loading ? "Verifying…" : "Continue"}
-                  <ArrowRight className = "size-4" />
-                </button>
+                <div>
+                  <label className="text-[11px] uppercase tracking-widest text-gray-500">
+                    Confirm Password
+                  </label>
+                  <div className="relative mt-2">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="h-11 w-full rounded-lg border border-white/10 bg-white/5 px-4 pr-11 text-sm text-white placeholder:text-gray-600 focus:border-white/25 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                    >
+                      {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                  {passwordError && (
+                    <p className="mt-2 text-xs text-red-400">{passwordError}</p>
+                  )}
+                </div>
+              </div>
 
-                <p className = "mt-6 text-center text-sm text-gray-500">
-                  Already have an account?{" "}
-                  <Link
-                    href="/auth/login"
-                    className = "text-white underline underline-offset-2"
-                  >
-                    Login
-                  </Link>
+              {step2Error && (
+                <p className="mt-4 text-sm text-red-400" role="alert">
+                  {step2Error}
                 </p>
-              </>
-            ) : step === 2 ? (
-                <>
-                  <span className = "inline-block rounded border border-[#2a2a2a] px-3 py-1 text-[11px] uppercase tracking-widest text-gray-400">
-                    Step 02/03
-                  </span>
+              )}
 
-                  <h1 className = "mt-4 font-serif text-3xl font-semibold leading-tight md:text-4xl">
-                    User Details
-                  </h1>
-                  <p className = "mt-3 text-sm leading-relaxed text-gray-400">
-                    Tell us who you are and set up your login credentials.
-                  </p>
+              <button
+                onClick={handleContinueFromStep2}
+                disabled={step2Loading}
+                className="mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white text-sm font-medium text-black transition-all hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {step2Loading ? "Creating account…" : "Continue"}
+                <ArrowRight className="size-4" />
+              </button>
+            </>
+          ) : (
+            <>
+              <h1 className="text-3xl font-light tracking-tight md:text-4xl">
+                Club Registration
+              </h1>
+              <p className="mt-3 text-sm leading-relaxed text-gray-400">
+                Define your venue&apos;s identity in the network.
+              </p>
 
-                  <div className = "mt-10">
-                    <div>
-                      <label className = "text-xs uppercase tracking-widest text-gray-500">
-                        Full Name
-                      </label>
-                      <input
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Juan Dela Cruz"
-                        className = "mt-2 h-11 w-full rounded-lg border border-[#2a2a2a] bg-[#141414] px-4 text-sm text-white placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
-                      />
-                    </div>
+              <div className="mt-8 space-y-5">
+                <div>
+                  <label className="text-[11px] uppercase tracking-widest text-gray-500">
+                    Club Name
+                  </label>
+                  <input
+                    value={clubName}
+                    onChange={(e) => setClubName(e.target.value)}
+                    placeholder="e.g. Club Name"
+                    className="mt-2 h-11 w-full rounded-lg border border-white/10 bg-white/5 px-4 text-sm text-white placeholder:text-gray-600 focus:border-white/25 focus:outline-none"
+                  />
+                </div>
 
-                    <div className = "mt-5">
-                      <label className = "text-xs uppercase tracking-widest text-gray-500">
-                        Email Address
-                      </label>
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="owner@venue.com"
-                        className = "mt-2 h-11 w-full rounded-lg border border-[#2a2a2a] bg-[#141414] px-4 text-sm text-white placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div className = "mt-5">
-                      <label className = "text-xs uppercase tracking-widest text-gray-500">
-                        Contact Number <span className = "normal-case text-gray-600">(optional)</span>
-                      </label>
-                      <input
-                        type="tel"
-                        value={contactNumber}
-                        onChange={(e) => setContactNumber(e.target.value)}
-                        placeholder="+63 9XX XXX XXXX"
-                        className = "mt-2 h-11 w-full rounded-lg border border-[#2a2a2a] bg-[#141414] px-4 text-sm text-white placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div className = "mt-5">
-                      <label className = "text-xs uppercase tracking-widest text-gray-500">
-                        Password
-                      </label>
-
-                      <div className = "relative mt-2">
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className = "h-11 w-full rounded-lg border border-[#2a2a2a] bg-[#141414] px-4 pr-11 text-sm text-white placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword((v) => !v)}
-                          className = "absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
-                        >
-                          {showPassword ? (
-                            <EyeOff className = "size-4" />
-                          ) : (
-                              <Eye className = "size-4" />
-                          )}
-                        </button>
-                      </div>
-                      <p className = "mt-2 text-xs text-gray-600">
-                        Minimum of 8 characters, including alphanumeric.
-                      </p>
-                    </div>
-
-                    <div className = "mt-5">
-                      <label className = "text-xs uppercase tracking-widest text-gray-500">
-                        Confirm Password
-                      </label>
-
-                      <div className = "relative mt-2">
-                        <input
-                          type={showConfirmPassword ? "text" : "password"}
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className = "h-11 w-full rounded-lg border border-[#2a2a2a] bg-[#141414] px-4 pr-11 text-sm text-white placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword((v) => !v)}
-                          className = "absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
-                        >
-                          {showConfirmPassword ? (
-                            <EyeOff className = "size-4" />
-                          ) : (
-                              <Eye className = "size-4" />
-                          )}
-                        </button>
-                      </div>
-                      {passwordError && (
-                        <p className = "mt-2 text-xs text-red-400">
-                          {passwordError}
-                        </p>
-                      )}
-                    </div>
+                <div>
+                  <label className="text-[11px] uppercase tracking-widest text-gray-500">
+                    Address
+                  </label>
+                  <div className="relative mt-2">
+                    <MapPin className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gray-600" />
+                    <input
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Street, City, Province"
+                      className="h-11 w-full rounded-lg border border-white/10 bg-white/5 pl-11 pr-4 text-sm text-white placeholder:text-gray-600 focus:border-white/25 focus:outline-none"
+                    />
                   </div>
+                </div>
 
-                  {step2Error && (
-                    <p className = "mt-4 text-sm text-red-400" role="alert">
-                      {step2Error}
-                    </p>
-                  )}
+                <div>
+                  <label className="text-[11px] uppercase tracking-widest text-gray-500">
+                    Description <span className="normal-case text-gray-600">(optional)</span>
+                  </label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Briefly describe the atmosphere, music, crowd, etc."
+                    rows={4}
+                    className="mt-2 w-full resize-none rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:border-white/25 focus:outline-none"
+                  />
+                </div>
+              </div>
 
-                  <button
-                    onClick={handleContinueFromStep2}
-                    disabled={step2Loading}
-                    className = "mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white text-sm font-medium text-black transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {step2Loading ? "Creating account…" : "Continue"}
-                    <ArrowRight className = "size-4" />
-                  </button>
-                </>
-            ) : (
-                <>
-                  <span className = "inline-block rounded border border-[#2a2a2a] px-3 py-1 text-[11px] uppercase tracking-widest text-gray-400">
-                    Step 03/03
-                  </span>
+              {step3Error && (
+                <p className="mt-4 text-sm text-red-400" role="alert">
+                  {step3Error}
+                </p>
+              )}
 
-                  <h1 className = "mt-4 font-serif text-3xl font-semibold leading-tight md:text-4xl">
-                    Club Registration
-                  </h1>
-                  <p className = "mt-3 text-sm leading-relaxed text-gray-400">
-                    Define your venue&apos;s identity in the network.
-                  </p>
+              <button
+                onClick={handleCompleteRegistration}
+                disabled={step3Loading}
+                className="mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white text-sm font-medium uppercase tracking-wide text-black transition-all hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {step3Loading ? "Registering…" : "Complete Registration"}
+                <ArrowRight className="size-4" />
+              </button>
 
-                  <div className = "mt-10">
-                    <div>
-                      <label className = "text-xs uppercase tracking-widest text-gray-50">
-                        Club Name
-                      </label>
-                      <input
-                        value={clubName}
-                        onChange={(e) => setClubName(e.target.value)}
-                        placeholder="e.g. Club Name"
-                        className = "mt-2 h-11 w-full rounded-lg border border-[#2a2a2a] bg-[#141414] px-4 text-sm text-white placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div className = "mt-5">
-                      <label className = "text-xs uppercase tracking-widest text-gray-50">
-                        Address
-                      </label>
-                      <div className = "relative mt-2">
-                        <MapPin className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gray-600" />
-                        <input
-                          value={address}
-                          onChange={(e) => setAddress(e.target.value)}
-                          placeholder="Street, City, Province"
-                          className = "h-11 w-full rounded-lg border border-[#2a2a2a] bg-[#141414] pl-11 pr-4 text-sm text-white placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div className = "mt-5">
-                      <label className = "text-xs uppercase tracking-widest text-gray-500">
-                        Description <span className = "normal-case text-gray-600">(optional)</span>
-                      </label>
-                      <textarea
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder = "Briefly describe the atmosphere, music, crowd, etc."
-                        rows={4}
-                        className = "mt-2 w-full resize-none rounded-lg border border-[#2a2a2a] bg-[#141414] px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:border-gray-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  {step3Error && (
-                    <p className = "mt-4 text-sm text-red-400" role="alert">
-                      {step3Error}
-                    </p>
-                  )}
-
-                  <button
-                    onClick={handleCompleteRegistration}
-                    disabled={step3Loading}
-                    className = "mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-white text-sm font-medium uppercase tracking-wide text-black transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {step3Loading ? "Registering…" : "Complete Registration"}
-                    <ArrowRight className = "size-4" />
-                  </button>
-
-                  <p className = "mt-4 text-center text-xs text-gray-600">
-                    By completing registration, you agree to our{" "}
-
-                    <Link
-                      href="/termsOfService"
-                      className = "text-gray-400 underline underline-offset-2"
-                    >
-                      Terms of Service
-                    </Link>{" "}
-                    and {" "}
-                    <Link
-                      href="/privacy"
-                      className = "text-gray-400 underline underline-offset-2"
-                    >
-                      Privacy Policy
-                    </Link>
-                    .
-                  </p>
-                </>
-            )}
-          </div>
+              <p className="mt-4 text-center text-xs text-gray-600">
+                By completing registration, you agree to our{" "}
+                <Link href="/termsOfService" className="text-gray-400 underline underline-offset-2">
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link href="/privacy" className="text-gray-400 underline underline-offset-2">
+                  Privacy Policy
+                </Link>
+                .
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>
-  )
+  );
 }
