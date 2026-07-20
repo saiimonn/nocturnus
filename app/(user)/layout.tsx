@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import Nav from "@/components/UserNav";
 import Footer from "@/components/footer";
@@ -14,18 +14,14 @@ export default function UserLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // All handles are scoped to this effect invocation so cleanup can always
-    // cancel them. The previous version deferred init() with an untracked
-    // double rAF, so a fast unmount (nav to owner, Strict Mode, quick route
-    // change) ran cleanup while the instance was still null — nothing was
-    // destroyed — then the pending init() fired after unmount, leaking an
-    // orphaned Lenis (live raf loop + wheel listener) that fought for scroll.
     let cancelled = false;
     let deferId = 0;
     let loopId = 0;
     let lenis: Lenis | null = null;
+    let resizeObserver: ResizeObserver | null = null;
 
     document.documentElement.style.overflow = '';
     document.body.style.overflow = '';
@@ -50,6 +46,26 @@ export default function UserLayout({
 
       loopId = requestAnimationFrame(raf);
       lenis.scrollTo(0, { immediate: true });
+
+      // Lenis autoResize observes document.documentElement, whose box size
+      // (the viewport) never changes when content loads — only scrollHeight
+      // does, which ResizeObserver doesn't watch. Observe the actual content
+      // container instead, since its height grows when cards/images render.
+      if (contentRef.current) {
+        resizeObserver = new ResizeObserver(() => {
+          lenis?.resize();
+        });
+        resizeObserver.observe(contentRef.current);
+      }
+
+      // Safety net: re-measure after a delay to catch any content that
+      // finishes loading after the observer's initial callback.
+      setTimeout(() => {
+        if (!cancelled) lenis?.resize();
+      }, 1000);
+      setTimeout(() => {
+        if (!cancelled) lenis?.resize();
+      }, 2500);
     };
 
     deferId = requestAnimationFrame(() => {
@@ -60,8 +76,10 @@ export default function UserLayout({
       cancelled = true;
       cancelAnimationFrame(deferId);
       cancelAnimationFrame(loopId);
+      resizeObserver?.disconnect();
       lenis?.destroy();
       lenis = null;
+      resizeObserver = null;
       document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
     };
@@ -73,7 +91,7 @@ export default function UserLayout({
       <CustomScrollbar />
       <div className="relative z-10 flex min-h-screen flex-col">
         <Nav />
-        <div className="flex flex-1 flex-col">{children}</div>
+        <div ref={contentRef} className="flex flex-1 flex-col">{children}</div>
         <Footer />
       </div>
     </div>
