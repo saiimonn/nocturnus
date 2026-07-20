@@ -3,11 +3,12 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Input } from "@/components/ui/input";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, MapIcon } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, MapIcon, Calendar } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/lib/supabase";
+import { formatEventDate } from "@/lib/utils";
 
 type ClubRow = {
   id: string;
@@ -26,6 +27,7 @@ export default function Home() {
   const router = useRouter();
   const [searchValue, setSearchValue] = useState("");
   const [venueCards, setVenueCards] = useState<Venue[]>([]);
+  const [eventCards, setEventCards] = useState<EventCard[]>([]);
   const suggestions = useMemo(
     () => venueCards.map((v) => ({ label: v.name, address: v.location })),
     [venueCards]
@@ -68,6 +70,44 @@ export default function Home() {
     fetchVenues();
   }, []);
 
+  useEffect(() => {
+    async function fetchEvents() {
+      const now = new Date().toISOString();
+      const { data: events } = await supabase
+        .from("events")
+        .select("id, title, image_url, event_date, club_id")
+        .eq("status", "published")
+        .gte("event_date", now)
+        .order("event_date")
+        .limit(4);
+
+      if (!events?.length) return;
+
+      const clubIds = [...new Set(events.map((e) => e.club_id))];
+      const { data: clubs } = await supabase
+        .from("clubs")
+        .select("id, name, slug")
+        .in("id", clubIds);
+
+      const clubMap = new Map((clubs ?? []).map((c) => [c.id, c]));
+
+      setEventCards(
+        events.map((ev) => {
+          const club = clubMap.get(ev.club_id);
+          return {
+            id: ev.id,
+            title: ev.title,
+            imageSrc: ev.image_url || "/Image.png",
+            date: ev.event_date,
+            venueName: club?.name ?? "TBA",
+            venueSlug: club?.slug ?? "",
+          };
+        })
+      );
+    }
+    fetchEvents();
+  }, []);
+
   const matchingSuggestions = useMemo(() => {
     const normalized = searchValue.trim().toLowerCase();
     if (!normalized) return [];
@@ -95,6 +135,15 @@ export default function Home() {
     location: string;
     tablesLeft: string;
     slug: string;
+  }
+
+  interface EventCard {
+    id: string;
+    title: string;
+    imageSrc: string;
+    date: string;
+    venueName: string;
+    venueSlug: string;
   }
 
   interface VenueCarouselProps {
@@ -308,6 +357,83 @@ export default function Home() {
           <h2 className="text-2xl md:text-3xl font-medium mb-8">TONIGHT&apos;S VENUES</h2>
           <AutoVenueCarousel venueCards={venueCards} />
         </section>
+
+        {eventCards.length > 0 && (
+          <section className="w-full max-w-7xl mb-32">
+            <h2 className="text-2xl md:text-3xl font-medium mb-8">UPCOMING EVENTS</h2>
+
+            {/* Featured event — large hero card */}
+            {eventCards[0] && (
+              <Link
+                href={`/events/${eventCards[0].id}`}
+                className="group relative block w-full overflow-hidden rounded-2xl border border-white/5 aspect-[21/9] md:aspect-[3/1]"
+              >
+                <Image
+                  src={eventCards[0].imageSrc}
+                  alt={eventCards[0].title}
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-linear-to-t from-black via-black/50 to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-r from-black/60 to-transparent" />
+
+                <div className="absolute bottom-0 left-0 w-full p-6 md:p-10">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Calendar className="size-3.5 text-gray-400" />
+                    <span className="text-[11px] font-mono uppercase tracking-widest text-gray-400">
+                      {formatEventDate(eventCards[0].date)}
+                    </span>
+                  </div>
+                  <h3 className="text-2xl md:text-4xl font-light tracking-tight text-white mb-2">
+                    {eventCards[0].title}
+                  </h3>
+                  <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
+                    {eventCards[0].venueName}
+                  </p>
+                </div>
+
+                <div className="absolute top-6 right-6 md:top-10 md:right-10">
+                  <span className="inline-block rounded-full border border-white/20 bg-white/10 backdrop-blur-md px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white">
+                    Featured
+                  </span>
+                </div>
+              </Link>
+            )}
+
+            {/* Remaining events — static grid */}
+            {eventCards.length > 1 && (
+              <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {eventCards.slice(1).map((ev) => (
+                  <Link
+                    key={ev.id}
+                    href={`/events/${ev.id}`}
+                    className="group relative block overflow-hidden rounded-xl border border-white/5 aspect-[4/3]"
+                  >
+                    <Image
+                      src={ev.imageSrc}
+                      alt={ev.title}
+                      fill
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-linear-to-t from-black via-black/40 to-transparent" />
+
+                    <div className="absolute bottom-0 left-0 w-full p-5">
+                      <span className="text-[10px] font-mono uppercase tracking-widest text-gray-400">
+                        {formatEventDate(ev.date)}
+                      </span>
+                      <h4 className="text-lg font-light tracking-tight text-white mt-1">
+                        {ev.title}
+                      </h4>
+                      <p className="text-[11px] uppercase tracking-[0.15em] text-gray-500 mt-1">
+                        {ev.venueName}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         <Separator className="max-w-6xl mx-auto mb-24 bg-[#1a1a1a]" />
 
