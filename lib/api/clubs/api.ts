@@ -513,6 +513,8 @@ export const updateTable = handle(
     if (body.category !== undefined) updates.category = parseCategory(body.category)
     if (body.pos_x !== undefined) updates.pos_x = requireNumber(body.pos_x, "pos_x")
     if (body.pos_y !== undefined) updates.pos_y = requireNumber(body.pos_y, "pos_y")
+    if (body.width !== undefined) updates.width = requireNumber(body.width, "width")
+    if (body.height !== undefined) updates.height = requireNumber(body.height, "height")
     if (body.is_available !== undefined) {
       if (typeof body.is_available !== "boolean") {
         throw badRequest("is_available must be a boolean")

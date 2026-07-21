@@ -80,6 +80,8 @@ const FloorplanCanvas = () => {
   const [editMinSpend, setEditMinSpend] = useState('');
   const [editCategory, setEditCategory] = useState<ClubTable['category']>('regular');
   const [editIsAvailable, setEditIsAvailable] = useState(true);
+  const [editWidth, setEditWidth] = useState('');
+  const [editHeight, setEditHeight] = useState('');
 
   const [floorplanImageFile, setFloorplanImageFile] = useState<File | null>(null);
   const [floorplanImagePreview, setFloorplanImagePreview] = useState<string | null>(null);
@@ -87,6 +89,8 @@ const FloorplanCanvas = () => {
 
   const transformerRef = useRef<Konva.Transformer | null>(null);
   const tableRefs = useRef<Record<string, Konva.Group | null>>({});
+  const originalTablesRef = useRef<Record<string, ClubTable>>({});
+  const [pendingChanges, setPendingChanges] = useState<Record<string, { pos_x?: number; pos_y?: number; width?: number; height?: number }>>({});
 
   const [image] = useImage(floorplanImagePreview ?? floorPlan?.image_url ?? '');
 
@@ -126,10 +130,26 @@ const FloorplanCanvas = () => {
           const { tables: floorPlanTables } = (await tablesResponse.json()) as { tables: ClubTable[] };
           if (cancelled) return;
           setTables(floorPlanTables);
+          const map: Record<string, ClubTable> = {};
+          for (const t of floorPlanTables) map[t.id] = t;
+          originalTablesRef.current = map;
+          setPendingChanges({});
           setDims(() => {
             const map: Record<string, CanvasDimensions> = {};
             for (const t of floorPlanTables) {
-              map[t.id] = defaultDimensions(shapeForCategory(t.category));
+              const shape = shapeForCategory(t.category);
+              if (t.width && t.height) {
+                const w = Math.round(posToPixel(t.width, CANVAS_WIDTH));
+                const h = Math.round(posToPixel(t.height, CANVAS_HEIGHT));
+                if (shape === 'circle') {
+                  const r = Math.round(Math.min(w, h) / 2);
+                  map[t.id] = { width: r * 2, height: r * 2, radius: r };
+                } else {
+                  map[t.id] = { width: w, height: h, radius: defaultDimensions('rect').radius };
+                }
+              } else {
+                map[t.id] = defaultDimensions(shape);
+              }
             }
             return map;
           });
@@ -207,7 +227,7 @@ const FloorplanCanvas = () => {
     }
   };
 
-  const handleDragEnd = async (e: Konva.KonvaEventObject<DragEvent>, id: string) => {
+  const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>, id: string) => {
     const newX = e.target.x();
     const newY = e.target.y();
     const pos_x = pixelToPos(newX, CANVAS_WIDTH);
@@ -217,22 +237,18 @@ const FloorplanCanvas = () => {
       prev.map((table) => (table.id === id ? { ...table, pos_x, pos_y } : table)),
     );
 
-    if (!club || !floorPlan) return;
-    try {
-      const response = await fetch(
-        `/api/owner/clubs/${club.id}/floor-plans/${floorPlan.id}/tables/${id}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pos_x, pos_y }),
-        },
-      );
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`);
-      }
-    } catch (error) {
-      console.error('Failed to save table position:', error);
-    }
+    const orig = originalTablesRef.current[id];
+    setPendingChanges((prev) => {
+      const existing = prev[id] ?? {};
+      const next = { ...existing };
+      if (orig && pos_x === orig.pos_x) delete next.pos_x;
+      else next.pos_x = pos_x;
+      if (orig && pos_y === orig.pos_y) delete next.pos_y;
+      else next.pos_y = pos_y;
+      const updated = { ...prev, [id]: next };
+      if (Object.keys(next).length === 0) delete updated[id];
+      return updated;
+    });
   };
 
   const handleSelect = (id: string) => {
@@ -245,34 +261,73 @@ const FloorplanCanvas = () => {
       setEditMinSpend(String(table.minimum_spend ?? ''));
       setEditCategory(table.category);
       setEditIsAvailable(table.is_available);
+      const d = dims[id] ?? defaultDimensions(shapeForCategory(table.category));
+      const shape = shapeForCategory(table.category);
+      setEditWidth(shape === 'circle' ? String(d.radius * 2) : String(d.width));
+      setEditHeight(shape === 'circle' ? String(d.radius * 2) : String(d.height));
     }
   };
 
-  const handleTransformEnd = async (id: string) => {
+  const handleTransformEnd = (id: string) => {
     const node = tableRefs.current[id];
     if (!node) return;
 
     const scaleX = node.scaleX();
     const scaleY = node.scaleY();
 
-    setDims((prev) => {
-      const d = prev[id];
-      if (!d) return prev;
-      const table = tables.find((t) => t.id === id);
-      if (!table) return prev;
+    const table = tables.find((t) => t.id === id);
+    if (!table) return;
 
-      if (shapeForCategory(table.category) === 'circle') {
-        const nextRadius = Math.max(22, Math.round(d.radius * Math.max(scaleX, scaleY)));
-        return { ...prev, [id]: { width: nextRadius * 2, height: nextRadius * 2, radius: nextRadius } };
-      }
+    const d = dims[id] ?? defaultDimensions(shapeForCategory(table.category));
+    const shape = shapeForCategory(table.category);
+    let nextWidth: number;
+    let nextHeight: number;
+    let nextRadius: number;
 
-      const nextWidth = Math.max(60, Math.round(d.width * scaleX));
-      const nextHeight = Math.max(40, Math.round(d.height * scaleY));
-      return { ...prev, [id]: { width: nextWidth, height: nextHeight, radius: d.radius } };
-    });
+    if (shape === 'circle') {
+      nextRadius = Math.max(22, Math.round(d.radius * Math.max(scaleX, scaleY)));
+      nextWidth = nextRadius * 2;
+      nextHeight = nextRadius * 2;
+    } else {
+      nextWidth = Math.max(60, Math.round(d.width * scaleX));
+      nextHeight = Math.max(40, Math.round(d.height * scaleY));
+      nextRadius = d.radius;
+    }
+
+    setDims((prev) => ({
+      ...prev,
+      [id]: { width: nextWidth, height: nextHeight, radius: nextRadius },
+    }));
+
+    // Update tables state so the side panel reads fresh width/height
+    const wFraction = pixelToPos(nextWidth, CANVAS_WIDTH);
+    const hFraction = pixelToPos(nextHeight, CANVAS_HEIGHT);
+    setTables((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, width: wFraction, height: hFraction } : t)),
+    );
 
     node.scaleX(1);
     node.scaleY(1);
+
+    // Sync side panel fields (only if not actively editing)
+    if (selectedId === id && !isEditMode) {
+      setEditWidth(String(nextWidth));
+      setEditHeight(String(nextHeight));
+    }
+
+    // Track pending dimension changes
+    const orig = originalTablesRef.current[id];
+    setPendingChanges((prev) => {
+      const existing = prev[id] ?? {};
+      const next = { ...existing };
+      if (orig && wFraction === orig.width) delete next.width;
+      else next.width = wFraction;
+      if (orig && hFraction === orig.height) delete next.height;
+      else next.height = hFraction;
+      const updated = { ...prev, [id]: next };
+      if (Object.keys(next).length === 0) delete updated[id];
+      return updated;
+    });
   };
 
   const selectedTable = tables.find((t) => t.id === selectedId) ?? null;
@@ -288,7 +343,11 @@ const FloorplanCanvas = () => {
   const editLabelIsValid = editLabel.trim().length > 0;
   const editCapacityIsValid = Number.isFinite(editParsedCapacity) && editParsedCapacity > 0;
   const editMinSpendIsValid = Number.isFinite(editParsedMinSpend) && editParsedMinSpend > 0;
-  const canSaveEdits = editLabelIsValid && editCapacityIsValid && editMinSpendIsValid;
+  const editParsedWidth = Number(editWidth);
+  const editParsedHeight = Number(editHeight);
+  const editWidthIsValid = Number.isFinite(editParsedWidth) && editParsedWidth > 0;
+  const editHeightIsValid = Number.isFinite(editParsedHeight) && editParsedHeight > 0;
+  const canSaveEdits = editLabelIsValid && editCapacityIsValid && editMinSpendIsValid && editWidthIsValid && editHeightIsValid;
 
   const currencyFormatter = useMemo(
     () => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }),
@@ -324,7 +383,17 @@ const FloorplanCanvas = () => {
       const { table: newTable } = (await response.json()) as { table: ClubTable };
 
       setTables((prev) => [...prev, newTable]);
-      setDims((prev) => ({ ...prev, [newTable.id]: defaultDimensions(newTableShape) }));
+      // Compute dims from actual saved values
+      const w = Math.round(posToPixel(newTable.width, CANVAS_WIDTH));
+      const h = Math.round(posToPixel(newTable.height, CANVAS_HEIGHT));
+      const shape = shapeForCategory(newTable.category);
+      if (shape === 'circle') {
+        const r = Math.round(Math.min(w, h) / 2);
+        setDims((prev) => ({ ...prev, [newTable.id]: { width: r * 2, height: r * 2, radius: r } }));
+      } else {
+        setDims((prev) => ({ ...prev, [newTable.id]: { width: w, height: h, radius: defaultDimensions('rect').radius } }));
+      }
+      originalTablesRef.current[newTable.id] = newTable;
       setSelectedId(newTable.id);
       setIsAddModalOpen(false);
       setNewTableLabel('');
@@ -354,6 +423,12 @@ const FloorplanCanvas = () => {
         delete next[selectedId];
         return next;
       });
+      setPendingChanges((prev) => {
+        const next = { ...prev };
+        delete next[selectedId];
+        return next;
+      });
+      delete originalTablesRef.current[selectedId];
       setSelectedId(null);
     } catch (error) {
       console.error('Failed to delete table:', error);
@@ -361,8 +436,43 @@ const FloorplanCanvas = () => {
     }
   };
 
+  const hasUnsavedChanges = Object.keys(pendingChanges).length > 0;
+
+  const handleSaveChanges = async () => {
+    if (!club || !floorPlan || !hasUnsavedChanges) return;
+    try {
+      const entries = Object.entries(pendingChanges);
+      await Promise.all(
+        entries.map(([tableId, changes]) =>
+          fetch(`/api/owner/clubs/${club.id}/floor-plans/${floorPlan.id}/tables/${tableId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(changes),
+          }).then((res) => {
+            if (!res.ok) throw new Error(`Failed to save table ${tableId}`);
+            return res.json() as Promise<{ table: ClubTable }>;
+          }),
+        ),
+      );
+      // Update originals to match current state
+      for (const [tableId] of entries) {
+        const current = tables.find((t) => t.id === tableId);
+        if (current) originalTablesRef.current[tableId] = current;
+      }
+      setPendingChanges({});
+    } catch (error) {
+      console.error('Failed to save changes:', error);
+      window.alert('Failed to save changes. Please try again.');
+    }
+  };
+
   const handleEditSave = async () => {
     if (!selectedId || !canSaveEdits || !club || !floorPlan) return;
+
+    // Capture local position before state updates (React batches)
+    const currentTable = tables.find((t) => t.id === selectedId);
+    const localPos = currentTable ? { pos_x: currentTable.pos_x, pos_y: currentTable.pos_y } : null;
+
     try {
       const response = await fetch(
         `/api/owner/clubs/${club.id}/floor-plans/${floorPlan.id}/tables/${selectedId}`,
@@ -375,6 +485,8 @@ const FloorplanCanvas = () => {
             minimum_spend: Math.max(1, Math.round(editParsedMinSpend)),
             category: editCategory,
             is_available: editIsAvailable,
+            width: pixelToPos(editParsedWidth, CANVAS_WIDTH),
+            height: pixelToPos(editParsedHeight, CANVAS_HEIGHT),
           }),
         },
       );
@@ -383,10 +495,38 @@ const FloorplanCanvas = () => {
       }
       const { table: updated } = (await response.json()) as { table: ClubTable };
 
-      setTables((prev) => prev.map((t) => (t.id === selectedId ? updated : t)));
+      // Merge API response with current state, preserving local-only position
+      setTables((prev) =>
+        prev.map((t) => {
+          if (t.id !== selectedId) return t;
+          return localPos
+            ? { ...updated, pos_x: localPos.pos_x, pos_y: localPos.pos_y }
+            : updated;
+        }),
+      );
+
+      // Compute dims from the actual saved width/height, not category defaults
       setDims((prev) => {
         const shape = shapeForCategory(updated.category);
-        return { ...prev, [selectedId]: defaultDimensions(shape) };
+        const w = Math.round(posToPixel(updated.width, CANVAS_WIDTH));
+        const h = Math.round(posToPixel(updated.height, CANVAS_HEIGHT));
+        if (shape === 'circle') {
+          const r = Math.round(Math.min(w, h) / 2);
+          return { ...prev, [selectedId]: { width: r * 2, height: r * 2, radius: r } };
+        }
+        return { ...prev, [selectedId]: { width: w, height: h, radius: prev[selectedId]?.radius ?? defaultDimensions('rect').radius } };
+      });
+
+      // Update original ref with the merged state (preserved position + saved fields)
+      originalTablesRef.current[selectedId] = localPos
+        ? { ...updated, pos_x: localPos.pos_x, pos_y: localPos.pos_y }
+        : updated;
+
+      // Edit save sends all fields, so clear all pending changes for this table
+      setPendingChanges((prev) => {
+        const next = { ...prev };
+        delete next[selectedId];
+        return next;
       });
       setIsEditMode(false);
     } catch (error) {
@@ -444,11 +584,18 @@ const FloorplanCanvas = () => {
         <div className="text-sm font-semibold uppercase tracking-[0.2em]">
           Club Layout
         </div>
-        {floorPlan && (
-          <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
-            Add Table
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {hasUnsavedChanges && (
+            <Button size="sm" onClick={handleSaveChanges}>
+              Save Changes
+            </Button>
+          )}
+          {floorPlan && (
+            <Button size="sm" variant="outline" onClick={() => setIsAddModalOpen(true)}>
+              Add Table
+            </Button>
+          )}
+        </div>
       </div>
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent>
@@ -713,7 +860,7 @@ const FloorplanCanvas = () => {
               </h3>
               <button
                 onClick={() => { setSelectedId(null); setIsEditMode(false); }}
-                className="text-xs text-gray-500 hover:text-black transition-colors cursor-pointer"
+                className="text-xs text-gray-500 hover:text-white transition-colors cursor-pointer"
               >
                 Close
               </button>
@@ -745,6 +892,54 @@ const FloorplanCanvas = () => {
                 <div className="text-sm text-black capitalize">
                   {shapeForCategory(selectedTable.category) === 'circle' ? 'Circle' : 'Rectangle'}
                 </div>
+              </div>
+
+              {/* Width */}
+              <div className="grid gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                  Width (px)
+                </label>
+                {isEditMode ? (
+                  <>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={editWidth}
+                      onChange={(e) => setEditWidth(e.target.value)}
+                    />
+                    {!editWidthIsValid && (
+                      <span className="text-xs text-destructive">Must be greater than 0.</span>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-sm text-black">
+                    {Math.round((selectedTable.width ?? 0) * CANVAS_WIDTH)} px
+                  </div>
+                )}
+              </div>
+
+              {/* Height */}
+              <div className="grid gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                  Height (px)
+                </label>
+                {isEditMode ? (
+                  <>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={editHeight}
+                      onChange={(e) => setEditHeight(e.target.value)}
+                    />
+                    {!editHeightIsValid && (
+                      <span className="text-xs text-destructive">Must be greater than 0.</span>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-sm text-black">
+                    {Math.round((selectedTable.height ?? 0) * CANVAS_HEIGHT)} px
+                  </div>
+                )}
               </div>
 
               {/* Capacity */}
@@ -849,7 +1044,7 @@ const FloorplanCanvas = () => {
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col gap-2 pt-2 border-t border-zinc-200">
+            <div className="flex flex-col gap-2 pt-2 border-t border-zinc-800">
               {isEditMode ? (
                 <div className="flex gap-2">
                   <Button
