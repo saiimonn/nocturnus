@@ -74,7 +74,6 @@ const FloorplanCanvas = () => {
   const [newTableCapacity, setNewTableCapacity] = useState('6');
   const [newTableMinSpend, setNewTableMinSpend] = useState('8000');
   const [newTableCategory, setNewTableCategory] = useState<ClubTable['category']>('regular');
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editLabel, setEditLabel] = useState('');
   const [editCapacity, setEditCapacity] = useState('');
@@ -239,6 +238,7 @@ const FloorplanCanvas = () => {
   const handleSelect = (id: string) => {
     const table = tables.find((t) => t.id === id);
     setSelectedId(id);
+    setIsEditMode(false);
     if (table) {
       setEditLabel(table.label);
       setEditCapacity(String(table.capacity));
@@ -355,7 +355,6 @@ const FloorplanCanvas = () => {
         return next;
       });
       setSelectedId(null);
-      setIsDetailsOpen(false);
     } catch (error) {
       console.error('Failed to delete table:', error);
       window.alert('Failed to delete the table. Please try again.');
@@ -440,16 +439,11 @@ const FloorplanCanvas = () => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-4 rounded-xl overflow-hidden">
-      <div className="mb-4 flex w-full max-w-200 items-center justify-between gap-3">
+    <div className="flex flex-col p-4 rounded-xl overflow-hidden">
+      <div className="mb-4 flex w-full items-center justify-between gap-3">
         <div className="text-sm font-semibold uppercase tracking-[0.2em]">
           Club Layout
         </div>
-        {selectedTable && (
-          <Button variant="outline" size="sm" onClick={() => setIsDetailsOpen(true)}>
-            View Details
-          </Button>
-        )}
         {floorPlan && (
           <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
             Add Table
@@ -560,236 +554,259 @@ const FloorplanCanvas = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {!floorPlan?.image_url ? (
-        <div className="flex h-150 w-200 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 p-6 text-center">
-          <div className="text-base font-semibold text-foreground">Set your floorplan image</div>
-          <div className="text-sm text-muted-foreground">
-            Upload an image to start placing tables.
-          </div>
-          <div className="flex w-full max-w-md flex-col gap-2 sm:flex-row sm:items-center">
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={handleFloorplanImageFileChange}
-            />
-            <Button
-              type="button"
-              onClick={handleSaveFloorplanImage}
-              disabled={!floorplanImageFile || isSavingFloorplanImage}
-            >
-              Save
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="mb-3 flex w-full max-w-200 flex-col gap-2 sm:flex-row sm:items-center">
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={handleFloorplanImageFileChange}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleSaveFloorplanImage}
-              disabled={!floorplanImageFile || isSavingFloorplanImage}
-            >
-              Update image
-            </Button>
-          </div>
-          <Stage
-            width={CANVAS_WIDTH}
-            height={CANVAS_HEIGHT}
-            className="bg-black border border-zinc-800 cursor-crosshair"
-            onMouseDown={(e) => {
-              const stage = e.target.getStage();
-              if (stage && e.target === stage) {
-                setSelectedId(null);
-                setIsDetailsOpen(false);
-              }
-            }}
-            onTouchStart={(e) => {
-              const stage = e.target.getStage();
-              if (stage && e.target === stage) {
-                setSelectedId(null);
-                setIsDetailsOpen(false);
-              }
-            }}
-          >
-            <Layer listening={false}>
-              {image && (
-                <KonvaImage image={image} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} opacity={0.4} />
-              )}
-            </Layer>
 
-            <Layer>
-              {tables.map((table) => {
-                const d = dims[table.id] ?? defaultDimensions(shapeForCategory(table.category));
-                const isSelected = table.id === selectedId;
-                const colors = categoryColors[table.category ?? ''] ?? defaultColors;
-                const shape = shapeForCategory(table.category);
-                const px = posToPixel(table.pos_x, CANVAS_WIDTH);
-                const py = posToPixel(table.pos_y, CANVAS_HEIGHT);
-
-                return (
-                  <Group
-                    key={table.id}
-                    ref={(node) => { tableRefs.current[table.id] = node; }}
-                    x={px}
-                    y={py}
-                    draggable
-                    onClick={() => handleSelect(table.id)}
-                    onTap={() => handleSelect(table.id)}
-                    onDragEnd={(e) => handleDragEnd(e, table.id)}
-                    onTransformEnd={() => handleTransformEnd(table.id)}
-                    onMouseEnter={(e) => {
-                      const container = e.target.getStage()?.container();
-                      if (container) container.style.cursor = 'grab';
-                    }}
-                    onMouseLeave={(e) => {
-                      const container = e.target.getStage()?.container();
-                      if (container) container.style.cursor = 'crosshair';
-                    }}
-                  >
-                    {shape === 'circle' ? (
-                      <Circle
-                        x={d.radius}
-                        y={d.radius}
-                        radius={d.radius}
-                        fill={isSelected ? '#3b82f6' : colors.fill}
-                        stroke={isSelected ? '#60a5fa' : colors.stroke}
-                        strokeWidth={2}
-                        shadowColor="black"
-                        shadowBlur={isSelected ? 12 : 4}
-                        shadowOpacity={0.6}
-                      />
-                    ) : (
-                      <Rect
-                        width={d.width}
-                        height={d.height}
-                        fill={isSelected ? '#3b82f6' : colors.fill}
-                        stroke={isSelected ? '#60a5fa' : colors.stroke}
-                        strokeWidth={2}
-                        cornerRadius={6}
-                        shadowColor="black"
-                        shadowBlur={isSelected ? 12 : 4}
-                        shadowOpacity={0.6}
-                      />
-                    )}
-                    <Text
-                      text={table.label}
-                      fontSize={14}
-                      fontFamily="sans-serif"
-                      fill="white"
-                      fontStyle="bold"
-                      width={shape === 'circle' ? d.radius * 2 : d.width}
-                      height={shape === 'circle' ? d.radius * 2 : d.height}
-                      align="center"
-                      verticalAlign="middle"
-                    />
-                  </Group>
-                );
-              })}
-              <Transformer
-                ref={transformerRef}
-                rotateEnabled={false}
-                keepRatio={selectedTable ? shapeForCategory(selectedTable.category) === 'circle' : false}
-                boundBoxFunc={(oldBox, newBox) => {
-                  if (newBox.width < 60 || newBox.height < 40) return oldBox;
-                  return newBox;
+      <div className="flex gap-4 items-start">
+        {/* Canvas area */}
+        <div className="flex flex-col items-center">
+          {!floorPlan?.image_url ? (
+            <div className="flex h-150 w-200 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 p-6 text-center">
+              <div className="text-base font-semibold text-foreground">Set your floorplan image</div>
+              <div className="text-sm text-muted-foreground">
+                Upload an image to start placing tables.
+              </div>
+              <div className="flex w-full max-w-md flex-col gap-2 sm:flex-row sm:items-center">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFloorplanImageFileChange}
+                />
+                <Button
+                  type="button"
+                  onClick={handleSaveFloorplanImage}
+                  disabled={!floorplanImageFile || isSavingFloorplanImage}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="mb-3 flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFloorplanImageFileChange}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleSaveFloorplanImage}
+                  disabled={!floorplanImageFile || isSavingFloorplanImage}
+                >
+                  Update image
+                </Button>
+              </div>
+              <Stage
+                width={CANVAS_WIDTH}
+                height={CANVAS_HEIGHT}
+                className="bg-black border border-zinc-800 cursor-crosshair"
+                onMouseDown={(e) => {
+                  const stage = e.target.getStage();
+                  if (stage && e.target === stage) {
+                    setSelectedId(null);
+                    setIsEditMode(false);
+                  }
                 }}
-              />
-            </Layer>
-          </Stage>
-        </>
-      )}
-      <Dialog
-        open={isDetailsOpen && Boolean(selectedTable)}
-        onOpenChange={(open) => {
-          setIsDetailsOpen(open);
-          if (open && selectedTable) {
-            setEditLabel(selectedTable.label);
-            setEditCapacity(String(selectedTable.capacity));
-            setEditMinSpend(String(selectedTable.minimum_spend ?? ''));
-            setEditCategory(selectedTable.category);
-            setEditIsAvailable(selectedTable.is_available);
-          }
-          if (!open) setIsEditMode(false);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Table Details</DialogTitle>
-            <DialogDescription>View or edit this table.</DialogDescription>
-          </DialogHeader>
-          {selectedTable && (
-            <div className="mt-3 grid gap-3">
-              <div className="grid gap-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Label</label>
-                {isEditMode ? (
-                  <Input
-                    value={editLabel}
-                    onChange={(e) => setEditLabel(e.target.value)}
+                onTouchStart={(e) => {
+                  const stage = e.target.getStage();
+                  if (stage && e.target === stage) {
+                    setSelectedId(null);
+                    setIsEditMode(false);
+                  }
+                }}
+              >
+                <Layer listening={false}>
+                  {image && (
+                    <KonvaImage image={image} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} opacity={0.4} />
+                  )}
+                </Layer>
+
+                <Layer>
+                  {tables.map((table) => {
+                    const d = dims[table.id] ?? defaultDimensions(shapeForCategory(table.category));
+                    const isSelected = table.id === selectedId;
+                    const colors = categoryColors[table.category ?? ''] ?? defaultColors;
+                    const shape = shapeForCategory(table.category);
+                    const px = posToPixel(table.pos_x, CANVAS_WIDTH);
+                    const py = posToPixel(table.pos_y, CANVAS_HEIGHT);
+
+                    return (
+                      <Group
+                        key={table.id}
+                        ref={(node) => { tableRefs.current[table.id] = node; }}
+                        x={px}
+                        y={py}
+                        draggable
+                        onClick={() => handleSelect(table.id)}
+                        onTap={() => handleSelect(table.id)}
+                        onDragEnd={(e) => handleDragEnd(e, table.id)}
+                        onTransformEnd={() => handleTransformEnd(table.id)}
+                        onMouseEnter={(e) => {
+                          const container = e.target.getStage()?.container();
+                          if (container) container.style.cursor = 'grab';
+                        }}
+                        onMouseLeave={(e) => {
+                          const container = e.target.getStage()?.container();
+                          if (container) container.style.cursor = 'crosshair';
+                        }}
+                      >
+                        {shape === 'circle' ? (
+                          <Circle
+                            x={d.radius}
+                            y={d.radius}
+                            radius={d.radius}
+                            fill={isSelected ? '#3b82f6' : colors.fill}
+                            stroke={isSelected ? '#60a5fa' : colors.stroke}
+                            strokeWidth={2}
+                            shadowColor="black"
+                            shadowBlur={isSelected ? 12 : 4}
+                            shadowOpacity={0.6}
+                          />
+                        ) : (
+                          <Rect
+                            width={d.width}
+                            height={d.height}
+                            fill={isSelected ? '#3b82f6' : colors.fill}
+                            stroke={isSelected ? '#60a5fa' : colors.stroke}
+                            strokeWidth={2}
+                            cornerRadius={6}
+                            shadowColor="black"
+                            shadowBlur={isSelected ? 12 : 4}
+                            shadowOpacity={0.6}
+                          />
+                        )}
+                        <Text
+                          text={table.label}
+                          fontSize={14}
+                          fontFamily="sans-serif"
+                          fill="white"
+                          fontStyle="bold"
+                          width={shape === 'circle' ? d.radius * 2 : d.width}
+                          height={shape === 'circle' ? d.radius * 2 : d.height}
+                          align="center"
+                          verticalAlign="middle"
+                        />
+                      </Group>
+                    );
+                  })}
+                  <Transformer
+                    ref={transformerRef}
+                    rotateEnabled={false}
+                    keepRatio={selectedTable ? shapeForCategory(selectedTable.category) === 'circle' : false}
+                    boundBoxFunc={(oldBox, newBox) => {
+                      if (newBox.width < 60 || newBox.height < 40) return oldBox;
+                      return newBox;
+                    }}
                   />
-                ) : (
-                  <div className="text-sm">{selectedTable.label}</div>
-                )}
-                {isEditMode && !editLabelIsValid && (
-                  <span className="text-xs text-destructive">Label is required.</span>
-                )}
-              </div>
+                </Layer>
+              </Stage>
+            </>
+          )}
+        </div>
+
+        {/* Table details side panel */}
+        {selectedTable && (
+          <div className="w-72 shrink-0 rounded-xl border border-zinc-200  p-4 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-black">
+                Table Details
+              </h3>
+              <button
+                onClick={() => { setSelectedId(null); setIsEditMode(false); }}
+                className="text-xs text-gray-500 hover:text-black transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {/* Label */}
               <div className="grid gap-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Capacity</label>
-                {isEditMode ? (
-                  <Input
-                    type="number"
-                    min={1}
-                    value={editCapacity}
-                    onChange={(e) => setEditCapacity(e.target.value)}
-                  />
-                ) : (
-                  <div className="text-sm">{selectedTable.capacity} pax</div>
-                )}
-                {isEditMode && !editCapacityIsValid && (
-                  <span className="text-xs text-destructive">
-                    Capacity must be greater than 0.
-                  </span>
-                )}
-              </div>
-              <div className="grid gap-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Minimum spend
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                  Label
                 </label>
                 {isEditMode ? (
-                  <Input
-                    type="number"
-                    min={0}
-                    value={editMinSpend}
-                    onChange={(e) => setEditMinSpend(e.target.value)}
-                  />
+                  <>
+                    <Input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} />
+                    {!editLabelIsValid && (
+                      <span className="text-xs text-destructive">Label is required.</span>
+                    )}
+                  </>
                 ) : (
-                  <div className="text-sm">
+                  <div className="text-sm text-black">{selectedTable.label}</div>
+                )}
+              </div>
+
+              {/* Shape */}
+              <div className="grid gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                  Shape
+                </label>
+                <div className="text-sm text-black capitalize">
+                  {shapeForCategory(selectedTable.category) === 'circle' ? 'Circle' : 'Rectangle'}
+                </div>
+              </div>
+
+              {/* Capacity */}
+              <div className="grid gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                  Capacity
+                </label>
+                {isEditMode ? (
+                  <>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={editCapacity}
+                      onChange={(e) => setEditCapacity(e.target.value)}
+                    />
+                    {!editCapacityIsValid && (
+                      <span className="text-xs text-destructive">Must be greater than 0.</span>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-sm text-black">{selectedTable.capacity} pax</div>
+                )}
+              </div>
+
+              {/* Minimum spend */}
+              <div className="grid gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                  Minimum Spend
+                </label>
+                {isEditMode ? (
+                  <>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={editMinSpend}
+                      onChange={(e) => setEditMinSpend(e.target.value)}
+                    />
+                    {!editMinSpendIsValid && (
+                      <span className="text-xs text-destructive">Must be greater than 0.</span>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-sm text-black">
                     {selectedTable.minimum_spend != null
                       ? currencyFormatter.format(selectedTable.minimum_spend)
                       : '—'}
                   </div>
                 )}
-                {isEditMode && !editMinSpendIsValid && (
-                  <span className="text-xs text-destructive">
-                    Minimum spend must be greater than 0.
-                  </span>
-                )}
               </div>
+
+              {/* Category */}
               <div className="grid gap-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Category</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                  Category
+                </label>
                 {isEditMode ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     {(['VIP', 'regular', 'booth', 'bar'] as const).map((cat) => (
                       <Button
                         key={cat}
                         variant={editCategory === cat ? 'default' : 'outline'}
-                        size="sm"
+                        size="xs"
                         onClick={() => setEditCategory(cat)}
                       >
                         {cat}
@@ -797,59 +814,82 @@ const FloorplanCanvas = () => {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-sm">{selectedTable.category ?? '—'}</div>
+                  <div className="text-sm text-black">{selectedTable.category ?? '—'}</div>
                 )}
               </div>
+
+              {/* Available */}
               <div className="grid gap-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Available</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                  Available
+                </label>
                 {isEditMode ? (
                   <div className="flex items-center gap-2">
                     <Button
                       variant={editIsAvailable ? 'default' : 'outline'}
-                      size="sm"
+                      size="xs"
                       onClick={() => setEditIsAvailable(true)}
                     >
                       Yes
                     </Button>
                     <Button
                       variant={!editIsAvailable ? 'default' : 'outline'}
-                      size="sm"
+                      size="xs"
                       onClick={() => setEditIsAvailable(false)}
                     >
                       No
                     </Button>
                   </div>
                 ) : (
-                  <div className="text-sm">{selectedTable.is_available ? 'Yes' : 'No'}</div>
+                  <div className="text-sm text-black">
+                    {selectedTable.is_available ? 'Yes' : 'No'}
+                  </div>
                 )}
               </div>
             </div>
-          )}
-          <DialogFooter>
-            <Button variant="destructive" size="sm" onClick={handleDeleteTable}>
-              Delete
-            </Button>
-            {isEditMode ? (
-              <>
+
+            {/* Actions */}
+            <div className="flex flex-col gap-2 pt-2 border-t border-zinc-200">
+              {isEditMode ? (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setIsEditMode(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    onClick={handleEditSave}
+                    disabled={!canSaveEdits}
+                  >
+                    Save
+                  </Button>
+                </div>
+              ) : (
                 <Button
-                  variant="outline"
                   size="sm"
-                  onClick={() => setIsEditMode(false)}
+                  className="w-full"
+                  onClick={() => setIsEditMode(true)}
                 >
-                  Cancel
+                  Edit Table
                 </Button>
-                <Button size="sm" onClick={handleEditSave} disabled={!canSaveEdits}>
-                  Save
-                </Button>
-              </>
-            ) : (
-              <Button size="sm" onClick={() => setIsEditMode(true)}>
-                Edit
+              )}
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full"
+                onClick={handleDeleteTable}
+              >
+                Delete Table
               </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
