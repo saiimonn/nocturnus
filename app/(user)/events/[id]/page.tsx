@@ -1,5 +1,6 @@
 import React from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Calendar, MapPin, ArrowRight, Bookmark } from "lucide-react"
@@ -38,10 +39,10 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   }
 
   // 4. Fetch venue (club) directly from Supabase
-  let venue = { name: "Otus Venue", address: "Details loading..." }
+  let venue = { name: "Otus Venue", address: "Details loading...", slug: "" }
   const { data: club, error: clubError } = await supabase
     .from("clubs")
-    .select("name, address")
+    .select("name, address, slug")
     .eq("id", currentEvent.club_id)
     .maybeSingle()
 
@@ -74,12 +75,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             {currentEvent.title}
           </h1>
           <div className="mt-4 flex items-center gap-3">
-            <Button
-              size="lg"
-              className="bg-white text-black hover:bg-zinc-200 font-bold px-8 rounded-md text-sm"
-            >
-              BOOK TABLE
-            </Button>
+            <Link href={`/club/${venue.slug}`}>
+              <Button
+                size="lg"
+                className="bg-white text-black hover:bg-zinc-200 font-bold px-8 rounded-md text-sm"
+              >
+                BOOK TABLE
+              </Button>
+            </Link>
             <Button
               size="icon"
               variant="outline"
@@ -157,12 +160,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                     </div>
                   </div>  
                   <div className="flex items-center">
-                    <Button
-                      size="icon"
-                      className="bg-white hover:bg-zinc-200 text-black rounded-lg w-10 h-10"
-                    >
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
+                    <Link href={`/club/${venue.slug}`}>
+                      <Button
+                        size="icon"
+                        className="bg-white hover:bg-zinc-200 text-black rounded-lg w-10 h-10"
+                      >
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </div>
