@@ -64,6 +64,10 @@ export interface ClubTable {
   category: "VIP" | "regular" | "booth" | "bar" | null
   pos_x: number
   pos_y: number
+  /** Footprint as a fraction of canvas width (0.0-1.0), same convention as pos_x. */
+  width: number
+  /** Footprint as a fraction of canvas height (0.0-1.0), same convention as pos_y. */
+  height: number
   is_available: boolean
   created_at: string
   updated_at: string

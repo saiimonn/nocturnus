@@ -210,6 +210,8 @@ export interface Database {
           category: "VIP" | "regular" | "booth" | "bar" | null
           pos_x: number
           pos_y: number
+          width: number
+          height: number
           is_available: boolean
           created_at: string
           updated_at: string
@@ -224,6 +226,8 @@ export interface Database {
           category?: "VIP" | "regular" | "booth" | "bar" | null
           pos_x: number
           pos_y: number
+          width?: number
+          height?: number
           is_available?: boolean
           created_at?: string
           updated_at?: string
@@ -238,6 +242,8 @@ export interface Database {
           category?: "VIP" | "regular" | "booth" | "bar" | null
           pos_x?: number
           pos_y?: number
+          width?: number
+          height?: number
           is_available?: boolean
           created_at?: string
           updated_at?: string

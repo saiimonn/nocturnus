@@ -113,9 +113,12 @@ Individual bookable units mapped to a specific floor plan.
 | `category` | `varchar` | NULLABLE | ENUM enforced: `VIP`, `regular`, `booth`, `bar`. |
 | `pos_x` | `float` | NO NULL | Relative X coordinate on floor plan (0.0–1.0). |
 | `pos_y` | `float` | NO NULL | Relative Y coordinate on floor plan (0.0–1.0). |
+| `width` | `float` | NO NULL, DEFAULT `0.1375` | Footprint width as a **fraction of canvas width** (0.0–1.0), same relative convention as `pos_x`. Absolute pixels were rejected: position is already relative, and the two render paths use different pixel geometry (the owner editor is a fixed 800×600 Konva stage; the guest viewer applies a uniform CSS `scale()` with pinch-zoom to 4×), so a pixel size would drift out of proportion to the room at every zoom level. `float` matches `pos_x`/`pos_y` — this is geometry, not money. |
+| `height` | `float` | NO NULL, DEFAULT `0.10833333` | Footprint height as a fraction of canvas height (0.0–1.0). Paired with `width` rather than collapsed into one scalar because rect tables are non-square (110×65 at the editor's default) and the Konva `Transformer` resizes both axes freely. |
 | `is_available` | `boolean` | NO NULL | Current availability status. |
 | `created_at` | `timestamp` | NO NULL | Record creation datetime (UTC). |
 | `updated_at` | `timestamp` | NO NULL | Last update datetime (UTC). |
+> **Note:** `club_tables_size_check` enforces `width > 0 AND width <= 1 AND height > 0 AND height <= 1`. There is deliberately **no `radius` column** — circles are the `bar` category, and the editor's resize handler already forces them square (it applies `max(scaleX, scaleY)` to both axes), so radius is exactly `width / 2`. Storing it would be a third value to keep in sync for no gain. Added in migration `0005_club_tables_size.sql`, which backfills existing rows to the footprint they were already being drawn at, so it is visually lossless.
 
 ### 7. `Events`
 Special nights, DJs, or themed parties hosted by a club.
