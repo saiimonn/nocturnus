@@ -9,8 +9,8 @@ import type {
 export const club: Club = {
   id: "c1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
   owner_id: "u1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
-  name: "Nocturnus",
-  slug: "nocturnus",
+  name: "Otus",
+  slug: "Otus",
   description:
     "Cebu's premier nightlife destination. High-fidelity sound, immersive lighting, and an uncompromising crowd.",
   address: "AS Fortuna, Mandaue City, Cebu",

@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nocturnus",
+  title: "Otus",
   description: "Cebu Club Finder",
 };
 
