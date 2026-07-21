@@ -172,11 +172,49 @@ export function makeFloorPlan(clubId: string): Tables["floor_plans"]["Insert"] {
   }
 }
 
+type TableCategory = NonNullable<Tables["club_tables"]["Row"]["category"]>
+
+// Footprints are fractions of the canvas (0.0-1.0), same convention as
+// pos_x/pos_y — see migration 0005. These bases mirror the layout editor's
+// `defaultDimensions()` against its 800x600 stage: rect 110x65, circle 76x76
+// (bar, drawn round). VIP and booth get a bigger footprint so a seeded floor
+// plan reads like a real room rather than a grid of identical boxes.
+const TABLE_FOOTPRINTS: Record<TableCategory, { width: number; height: number }> = {
+  VIP: { width: 0.175, height: 0.145 },
+  booth: { width: 0.15, height: 0.125 },
+  regular: { width: 0.1375, height: 0.10833 },
+  bar: { width: 0.095, height: 0.12667 },
+}
+
+// +/-12% so no two tables in a category are pixel-identical. Bar tables scale
+// on a single factor: they render as circles, and the editor's resize handler
+// keeps them square, so independent jitter per axis would produce ellipses the
+// UI can't represent.
+function jitteredFootprint(category: TableCategory): { width: number; height: number } {
+  const base = TABLE_FOOTPRINTS[category]
+  const clamp = (n: number) => Math.min(1, Math.max(0.01, Number(n.toFixed(5))))
+  const scale = () => faker.number.float({ min: 0.88, max: 1.12, fractionDigits: 3 })
+
+  if (category === "bar") {
+    const s = scale()
+    return { width: clamp(base.width * s), height: clamp(base.height * s) }
+  }
+  return { width: clamp(base.width * scale()), height: clamp(base.height * scale()) }
+}
+
 export function makeClubTable(
   floorPlanId: string,
   clubId: string,
 ): Tables["club_tables"]["Insert"] {
   const ts = now()
+  const category = faker.helpers.arrayElement([
+    "VIP",
+    "regular",
+    "booth",
+    "bar",
+  ] as const)
+  const { width, height } = jitteredFootprint(category)
+
   return {
     id: randomUUID(),
     floor_plan_id: floorPlanId,
@@ -188,9 +226,11 @@ export function makeClubTable(
         () => faker.number.float({ min: 1000, max: 20000, fractionDigits: 2 }),
         { probability: 0.7 },
       ) ?? null,
-    category: faker.helpers.arrayElement(["VIP", "regular", "booth", "bar"] as const),
+    category,
     pos_x: faker.number.float({ min: 0, max: 1, fractionDigits: 3 }),
     pos_y: faker.number.float({ min: 0, max: 1, fractionDigits: 3 }),
+    width,
+    height,
     is_available: faker.datatype.boolean(),
     created_at: ts,
     updated_at: ts,
