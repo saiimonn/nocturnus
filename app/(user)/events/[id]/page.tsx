@@ -163,8 +163,11 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                     <Link href={`/club/${venue.slug}`}>
                       <Button
                         size="icon"
-                        className="bg-white hover:bg-zinc-200 text-black rounded-lg w-10 h-10"
+                        className="bg-white hover:bg-zinc-200 cursor-pointer text-black rounded-lg w-auto px-5 h-10 flex items-center"
                       >
+                        <p>
+                          BOOK A TABLE NOW
+                        </p>
                         <ArrowRight className="w-4 h-4" />
                       </Button>
                     </Link>

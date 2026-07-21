@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useEffect, useRef, useTransition } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -28,6 +28,8 @@ export default function Home() {
   const [searchValue, setSearchValue] = useState("");
   const [venueCards, setVenueCards] = useState<Venue[]>([]);
   const [eventCards, setEventCards] = useState<EventCard[]>([]);
+  const [navigatingSlug, setNavigatingSlug] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
   const suggestions = useMemo(
     () => venueCards.map((v) => ({ label: v.name, address: v.location })),
     [venueCards]
@@ -270,8 +272,19 @@ export default function Home() {
               {venueCards.map((venue, cardIndex) => (
                 <div
                   key={`card-${cardIndex}-${venue.name}`}
-                  className="w-full shrink-0 px-3 md:w-1/2 xl:w-1/3 hover:scale-[1.02] transition-all duration-300 cursor-pointer"
-                  onClick={() => router.push(`/club/${venue.slug}`)}
+                  className={`w-full shrink-0 px-3 md:w-1/2 xl:w-1/3 hover:scale-[1.02] transition-all duration-300 cursor-pointer ${
+                    navigatingSlug === venue.slug
+                      ? "opacity-50 pointer-events-none"
+                      : navigatingSlug
+                        ? "opacity-40"
+                        : ""
+                  }`}
+                  onClick={() => {
+                    setNavigatingSlug(venue.slug);
+                    startTransition(() => {
+                      router.push(`/club/${venue.slug}`);
+                    });
+                  }}
                 >
                   <div className="relative group overflow-hidden rounded-xl border border-[#0a0a0a] aspect-[3/2]">
                     <Image

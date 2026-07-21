@@ -36,7 +36,7 @@ export default function VenueCard({
       </div>
 
       <div className="flex flex-1 flex-col p-4">
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col items-start justify-between">
           <h3 className="text-sm font-medium text-white md:text-base">{name}</h3>
           <span className="text-[11px] font-medium tracking-wide text-gray-500">
             {address}
@@ -44,7 +44,7 @@ export default function VenueCard({
         </div>
 
         <div className="mt-5">
-          <button className="flex w-full items-center justify-center rounded-full bg-[#1a1a1a] py-3 text-[9px] font-bold uppercase tracking-widest text-gray-200 transition-colors hover:bg-[#252525]">
+          <button className="cursor-pointer flex w-full items-center justify-center rounded-full bg-[#1a1a1a] py-3 text-[9px] font-bold uppercase tracking-widest text-gray-200 transition-colors hover:bg-[#252525]">
             BOOK NOW
           </button>
         </div>
