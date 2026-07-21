@@ -17,6 +17,7 @@ import {
   SESSION_COOKIE,
   createSession,
   sessionCookieOptions,
+  verifySession,
 } from "@/lib/api/auth/session"
 import type { Database } from "@/lib/db"
 
@@ -87,6 +88,21 @@ export const logout = handle(async () => {
   const cookieStore = await cookies()
   cookieStore.set(SESSION_COOKIE, "", { ...sessionCookieOptions, maxAge: 0 })
   return Response.json({ ok: true })
+})
+
+export const getMe = handle(async () => {
+  const cookieStore = await cookies()
+  const token = cookieStore.get(SESSION_COOKIE)?.value
+  const session = await verifySession(token)
+  if (!session) {
+    return Response.json({ user: null })
+  }
+  const { data: user } = await supabaseAdmin
+    .from("users")
+    .select("id, full_name, email, role")
+    .eq("id", session.userId)
+    .maybeSingle()
+  return Response.json({ user: user ?? null })
 })
 
 function hashToken(plaintext: string): string {
