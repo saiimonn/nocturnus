@@ -8,7 +8,20 @@ import { Menu } from "lucide-react";
 export default function Nav() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userName, setUserName] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user) {
+          setIsLoggedIn(true);
+          setUserName(data.user.full_name || data.user.email);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -70,33 +83,57 @@ export default function Nav() {
           >
             {!isLoggedIn ? (
               <div className="px-4 py-2 space-y-2">
-                <Link
-                  href = "/auth/login"
-                  className="block w-full text-left text-sm font-medium text-white hover:text-gray-300 transition-colors"
-                >
-                  Add Your Club
-                </Link>
-                <Link
-                  href="#"
-                  className="block text-sm text-gray-400 hover:text-white transition-colors"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Help and Support
-                </Link>
+                <div className="md:hidden space-y-2">
+                  <Link
+                    href="/browse"
+                    className="block text-sm text-gray-400 hover:text-white transition-colors"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Browse
+                  </Link>
+                  <Link
+                    href="/events"
+                    className="block text-sm text-gray-400 hover:text-white transition-colors"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Events
+                  </Link>
+                </div>
+                <div className="border-t border-white/10 pt-2 md:border-0 md:pt-0">
+                  <Link
+                    href="/auth/login"
+                    className="block w-full text-left text-sm font-medium hover:text-white text-gray-300 transition-colors"
+                  >
+                    Add Your Club
+                  </Link>
+                  <Link
+                    href="/faq"
+                    className="block text-sm text-gray-400 hover:text-white transition-colors"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Help and Support
+                  </Link>
+                </div>
               </div>
             ) : (
               <div className="px-4 py-2 space-y-2">
-                <h3 className="text-sm font-bold text-white mb-1">My Account</h3>
+                <h3 className="text-sm font-bold text-white mb-2">{userName}</h3>
                 <Link
-                  href="#"
+                  href="/dashboard"
                   className="block text-sm text-gray-400 hover:text-white transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
                   Dashboard
                 </Link>
                 <button
-                  onClick={() => { setIsLoggedIn(false); setIsOpen(false); }}
-                  className="block w-full text-left text-sm text-gray-400 hover:text-white transition-colors"
+                  onClick={() => {
+                    fetch("/api/auth/logout", { method: "POST" }).then(() => {
+                      setIsLoggedIn(false);
+                      setUserName("");
+                      setIsOpen(false);
+                    });
+                  }}
+                  className="block w-full text-left text-sm text-gray-400 hover:text-white transition-colors cursor-pointer"
                 >
                   Log out
                 </button>

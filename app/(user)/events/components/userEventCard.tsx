@@ -41,13 +41,13 @@ export default function EventCard({ event, status, venue }: EventCardProps) {
             {venue.name} · {venue.address}
           </p>
         )}
-        <p className="mt-1 text-[11px] text-gray-500">
+        <p className="mt-1 text-[11px] text-gray-500 mb-5">
           {formatEventDate(event.event_date)}
         </p>
 
-        <div className="mt-5">
+        <div className="mt-auto">
           <Link href={`/events/${event.id}`}>
-            <button className="flex w-full items-center justify-center rounded-full bg-[#1a1a1a] py-3 text-[9px] font-bold uppercase tracking-widest text-gray-200 transition-colors hover:bg-[#252525]">
+            <button className="flex w-full items-center justify-center rounded-full bg-[#1a1a1a] py-3 text-[9px] cursor-pointer font-bold uppercase tracking-widest text-gray-200 transition-colors hover:bg-[#252525]">
               VIEW DETAILS
             </button>
           </Link>

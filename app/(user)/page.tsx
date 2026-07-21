@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useEffect, useRef, useTransition } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, MapIcon, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/lib/supabase";
 import { formatEventDate } from "@/lib/utils";
@@ -28,6 +28,8 @@ export default function Home() {
   const [searchValue, setSearchValue] = useState("");
   const [venueCards, setVenueCards] = useState<Venue[]>([]);
   const [eventCards, setEventCards] = useState<EventCard[]>([]);
+  const [navigatingSlug, setNavigatingSlug] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
   const suggestions = useMemo(
     () => venueCards.map((v) => ({ label: v.name, address: v.location })),
     [venueCards]
@@ -258,7 +260,7 @@ export default function Home() {
             aria-label="Previous venues"
             className="shrink-0 rounded-full border border-white/15 bg-black/35 p-2.5 text-white/90 backdrop-blur-md transition-all duration-300 hover:border-white/40 hover:bg-black/55 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
           >
-            <ChevronLeft className="size-5" />
+            <ChevronLeft className="size-5 cursor-pointer" />
           </button>
 
           {/* Slider Track */}
@@ -270,31 +272,39 @@ export default function Home() {
               {venueCards.map((venue, cardIndex) => (
                 <div
                   key={`card-${cardIndex}-${venue.name}`}
-                  className="w-full shrink-0 px-3 md:w-1/2 xl:w-1/3 hover:scale-[1.02] transition-all duration-300 cursor-pointer"
-                  onClick={() => router.push(`/club/${venue.slug}`)}
+                  className={`w-full shrink-0 px-3 md:w-1/2 xl:w-1/3 hover:scale-[1.02] transition-all duration-300 cursor-pointer ${
+                    navigatingSlug === venue.slug
+                      ? "opacity-50 pointer-events-none"
+                      : navigatingSlug
+                        ? "opacity-40"
+                        : ""
+                  }`}
+                  onClick={() => {
+                    setNavigatingSlug(venue.slug);
+                    startTransition(() => {
+                      router.push(`/club/${venue.slug}`);
+                    });
+                  }}
                 >
-                  <div className="relative group overflow-hidden rounded-xl border border-[#0a0a0a] aspect-[3/2]">
+                  <div className="relative group overflow-hidden rounded-xl border border-[#0a0a0a] aspect-[4/3]">
                     <Image
                       src={venue.imageSrc}
                       alt={venue.imageAlt}
                       fill
-                      className="object-cover"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent z-10" />
+                    <div className="absolute inset-0 bg-linear-to-t from-black via-black/40 to-transparent z-10" />
 
-                    <div className="absolute bottom-6 left-6 z-20 w-full pr-8">
-                      <h3 className="text-3xl font-semibold mb-2 tracking-wide text-white">
+                    <div className="absolute bottom-0 left-0 w-full p-5 z-20">
+                      <h4 className="text-lg font-light tracking-tight text-white">
                         {venue.name}
-                      </h3>
-                      <div className="flex items-center text-xs text-gray-400 gap-3 font-mono">
-                        <span className="flex items-center gap-1">
-                          <MapIcon className="size-3" />
-                          {venue.location}
-                        </span>
-                        <span className="flex items-center gap-2 border border-[#333] px-2 py-0.5 rounded-sm bg-black/40 text-white">
-                          {venue.tablesLeft}
-                        </span>
-                      </div>
+                      </h4>
+                      <p className="text-[11px] uppercase tracking-[0.15em] text-gray-500 mt-1">
+                        {venue.location}
+                      </p>
+                      <span className="inline-block mt-2 text-[10px] font-mono uppercase tracking-widest text-gray-400 border border-[#333] px-2 py-0.5 rounded-sm bg-black/40 text-white">
+                        {venue.tablesLeft}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -309,7 +319,7 @@ export default function Home() {
             aria-label="Next venues"
             className="shrink-0 rounded-full border border-white/15 bg-black/35 p-2.5 text-white/90 backdrop-blur-md transition-all duration-300 hover:border-white/40 hover:bg-black/55 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
           >
-            <ChevronRight className="size-5" />
+            <ChevronRight className="size-5 cursor-pointer" />
           </button>
         </div>
 

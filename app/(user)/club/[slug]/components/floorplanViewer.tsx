@@ -71,6 +71,28 @@ function FloorplanContent({ tables, labels, imageUrl, selectedId, onSelect }: Fl
     return () => el.removeEventListener('touchmove', prevent)
   }, [])
 
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const handler = (e: WheelEvent) => {
+      e.preventDefault()
+      const base = getFitScale()
+      const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15
+      const next = Math.max(base, Math.min(4, scaleRef.current * factor))
+      const rect = el.getBoundingClientRect()
+      const cx = e.clientX - rect.left - rect.width / 2
+      const cy = e.clientY - rect.top - rect.height / 2
+      const ratio = next / scaleRef.current
+      const newOx = cx - ratio * (cx - offsetRef.current.x)
+      const newOy = cy - ratio * (cy - offsetRef.current.y)
+      setScale(next)
+      setOffset(clampOffset(newOx, newOy, next))
+    }
+    el.addEventListener('wheel', handler, { passive: false })
+    return () => el.removeEventListener('wheel', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const zoomIn = useCallback(() => {
     const base = getFitScale()
     const next = Math.min(scaleRef.current * 1.3, 4)
@@ -153,6 +175,7 @@ function FloorplanContent({ tables, labels, imageUrl, selectedId, onSelect }: Fl
   return (
     <div
       ref={containerRef}
+      data-lenis-prevent
       className="relative w-full overflow-hidden touch-none rounded-xl border border-white/10 bg-[#0a0a0a] h-[80vh] sm:h-[clamp(280px,50vw,500px)]"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -174,9 +197,9 @@ function FloorplanContent({ tables, labels, imageUrl, selectedId, onSelect }: Fl
         }}
       >
         {imageUrl ? (
-          <img src={imageUrl} alt="Floor plan" className="absolute inset-0 h-full w-full object-cover opacity-40" />
+          <img src={imageUrl} alt="Floor plan" draggable={false} onDragStart={(e) => e.preventDefault()} className="absolute inset-0 h-full w-full object-fill opacity-40 select-none" />
         ) : (
-          <div className="absolute inset-0 opacity-[0.04]" style={{
+          <div className="absolute inset-0 opacity-[0.04] select-none" style={{
             backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
             backgroundSize: '40px 40px',
           }} />
@@ -208,9 +231,8 @@ function FloorplanContent({ tables, labels, imageUrl, selectedId, onSelect }: Fl
               style={{
                 left: table.pos_x * CANVAS_W,
                 top: table.pos_y * CANVAS_H,
-                width: isBar ? 56 : 80,
-                height: isBar ? 56 : 50,
-                transform: 'translate(-50%, -50%)',
+                width: table.width ? Math.round(table.width * CANVAS_W) : (isBar ? 56 : 80),
+                height: table.height ? Math.round(table.height * CANVAS_H) : (isBar ? 56 : 50),
                 backgroundColor: isSelected ? '#3b82f6' : colors.fill,
                 border: `2px solid ${isSelected ? '#60a5fa' : colors.stroke}`,
                 boxShadow: isSelected ? `0 0 20px ${colors.glow}` : '0 2px 8px rgba(0,0,0,0.5)',
